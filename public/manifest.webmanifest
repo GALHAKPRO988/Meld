@@ -1,0 +1,17 @@
+{
+  "name": "Meld",
+  "short_name": "Meld",
+  "description": "Organización personal con IA: páginas, tareas, calendario y diario, todo en tu dispositivo.",
+  "lang": "es",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#171717",
+  "theme_color": "#171717",
+  "icons": [
+    { "src": "/icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "/icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "/icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}
