@@ -6,12 +6,22 @@
 // You can pass additional config via defineConfig({ vite: { ... }, etc... }) if needed.
 import { defineConfig } from "@lovable.dev/vite-tanstack-config";
 
+const isCapacitorBuild = process.env["npm_lifecycle_event"] === "build:ios";
+
 export default defineConfig({
-  nitro: { preset: "node-server" },
+  nitro: isCapacitorBuild ? false : { preset: "node-server" },
   tanstackStart: {
-    // Redirect TanStack Start's bundled server entry to src/server.ts (our SSR error wrapper).
-    // nitro/vite builds from this
-    server: { entry: "server" },
+    // The static shell prerender uses TanStack's standard fetch handler.
+    server: { entry: isCapacitorBuild ? "capacitor-server" : "server" },
+    ...(isCapacitorBuild
+      ? {
+          spa: {
+            enabled: true,
+            maskPath: "/",
+            prerender: { outputPath: "/index" },
+          },
+        }
+      : {}),
   },
   vite: {
     // turndown's Node build calls require() during SSR and crashes every page;

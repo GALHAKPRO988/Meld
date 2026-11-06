@@ -127,6 +127,8 @@ El servidor de desarrollo mostrará la dirección local en la terminal.
 | --- | --- |
 | `npm run dev` | Inicia el servidor de desarrollo. |
 | `npm run build` | Genera el build de producción web/SSR. |
+| `npm run build:ios` | Genera el shell SPA local que carga Capacitor para iOS. |
+| `npx cap sync ios` | Copia el build web y sincroniza los plugins nativos de iOS. |
 | `npm run preview` | Previsualiza el build de producción. |
 | `npm test` | Ejecuta las pruebas una vez. |
 | `npm run test:watch` | Ejecuta las pruebas en modo watch. |
@@ -155,6 +157,14 @@ Los artefactos generados se guardan en `release/`. Para más detalles, consulta 
 
 La versión que muestra la aplicación se obtiene de `package.json`. Para la actualización automática de Windows, la publicación debe contener los metadatos y archivos generados por Electron Builder. La distribución Android/iOS requiere sus propios artefactos y canales; `release:win` solo publica Windows.
 
+### Compilar iOS con Codemagic
+
+El build web habitual de TanStack Start genera un servidor Node para SSR; no se puede incluir ese servidor en el WebView de iOS. `npm run build:ios` genera un shell SPA estático en `dist/client` solo para la compilación móvil, sin cambiar el build SSR de la web. `npx cap sync ios` copia ese shell y los recursos de Capacitor al proyecto Xcode.
+
+El workflow `ios-release` de `codemagic.yaml` compila y firma el IPA. En Codemagic, configura la firma de Apple para el identificador `com.seacraft2net.spliteasy` con distribución App Store y añade un certificado Apple Distribution y su provisioning profile de App Store en **Code signing identities**. El workflow los obtiene por `distribution_type` e `bundle_identifier`; no guardes certificados, perfiles, contraseñas ni claves privadas en el repositorio. Al finalizar, descarga el `.ipa` desde **Artifacts** del build.
+
+SplitEasy no utiliza autenticación ni un backend propio. Los datos se guardan en el almacenamiento local de la aplicación; las funciones de IA requieren las claves que configure el usuario y acceso a Internet para comunicarse directamente con el proveedor.
+
 ## Tecnologías
 
 - **Aplicación:** React, TypeScript, TanStack Start y TanStack Router.
@@ -163,7 +173,7 @@ La versión que muestra la aplicación se obtiene de `package.json`. Para la act
 - **Datos locales:** Dexie sobre IndexedDB; Zustand para preferencias persistentes.
 - **IA:** Vercel AI SDK y adaptadores de Anthropic, OpenAI, Google y OpenRouter.
 - **Escritorio:** Electron y electron-updater.
-- **Móvil:** configuración de Capacitor y manifest de aplicación web.
+- **Móvil:** Capacitor para Android e iOS; Codemagic compila el IPA firmado en macOS.
 - **Pruebas y calidad:** Vitest y ESLint.
 
 ## Estructura
