@@ -6,7 +6,9 @@
 // You can pass additional config via defineConfig({ vite: { ... }, etc... }) if needed.
 import { defineConfig } from "@lovable.dev/vite-tanstack-config";
 
-const isCapacitorBuild = process.env["npm_lifecycle_event"] === "build:ios";
+const isCapacitorBuild = ["build:ios", "build:android"].includes(
+  process.env["npm_lifecycle_event"] ?? "",
+);
 
 export default defineConfig({
   nitro: isCapacitorBuild ? false : { preset: "node-server" },

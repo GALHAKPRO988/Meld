@@ -1,8 +1,8 @@
 import type { CapacitorConfig } from '@capacitor/cli';
 
 const config: CapacitorConfig = {
-  appId: 'com.seacraft2net.spliteasy',
-  appName: 'SplitEasy',
+  appId: 'net.seacraft2.meld',
+  appName: 'Meld',
   webDir: 'dist/client',
 };
 
