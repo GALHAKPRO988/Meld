@@ -1,1 +1,4 @@
-This is a test, don't modify.
+- Solucionada la versión de android
+- Optimizada la versión de android
+- Optimizada la versión de Windows
+- Correción de errores

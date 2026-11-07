@@ -100,7 +100,7 @@ Descarga el instalador `.exe` de la sección [Releases](https://github.com/GALHA
 - **Android:** la comprobación de actualizaciones puede ofrecer el APK si la release pública incluye uno. Android siempre solicita confirmar la instalación; la instalación también puede depender de los permisos del dispositivo.
 - **iOS:** GitHub no instala una app iOS directamente. La distribución y las actualizaciones deben hacerse mediante App Store o TestFlight.
 
-La comprobación de actualizaciones usa la release pública más reciente de [GALHAKPRO988/Meld](https://github.com/GALHAKPRO988/Meld/releases). Para que funcione, el repositorio debe ser accesible públicamente y tener una release publicada con una etiqueta de versión superior a la instalada. La descarga específica depende de que esa release incluya un archivo compatible.
+La comprobación de actualizaciones usa el JSON de la release pública más reciente de [GALHAKPRO988/Meld](https://github.com/GALHAKPRO988/Meld/releases) y elige un artefacto compatible con el dispositivo. En Windows, descarga `Meld-Setup_v<version>.exe` y comprueba su SHA-256 antes de instalarlo; no requiere `latest.yml`. Las instalaciones que aún usan el mecanismo anterior deben instalar manualmente una versión con este flujo nuevo. El repositorio debe ser accesible públicamente y la release debe incluir el instalador de Windows con ese nombre.
 
 ## Desarrollo
 
@@ -142,7 +142,7 @@ El servidor de desarrollo mostrará la dirección local en la terminal.
 1. Actualiza `version` en `package.json`.
 2. Crea y publica una release de GitHub cuyo tag coincida con esa versión (por ejemplo, `v1.0.1`).
 3. Configura `GH_TOKEN` en el entorno con un token que tenga permiso para publicar en `GALHAKPRO988/Meld`.
-4. Ejecuta `npm run release:win`. Electron Builder publicará el instalador y `latest.yml`, necesario para el actualizador de Windows.
+4. Ejecuta `npm run release:win`. Electron Builder publicará el instalador que la app selecciona desde el JSON de la release.
 5. Retira el token del entorno después de publicar.
 
 En PowerShell, el paso del token puede hacerse así; reemplaza el marcador localmente y **no lo guardes en el repositorio**:
@@ -155,7 +155,7 @@ $env:GH_TOKEN = $null
 
 Los artefactos generados se guardan en `release/`. Para más detalles, consulta [RELEASES.md](RELEASES.md).
 
-La versión que muestra la aplicación se obtiene de `package.json`. Para la actualización automática de Windows, la publicación debe contener los metadatos y archivos generados por Electron Builder. La distribución Android/iOS requiere sus propios artefactos y canales; `release:win` solo publica Windows.
+La versión que muestra la aplicación se obtiene de `package.json`. Para la actualización automática de Windows, la release pública debe contener `Meld-Setup_v<version>.exe` y su hash SHA-256 publicado por GitHub. La distribución Android/iOS requiere sus propios artefactos y canales; `release:win` solo publica Windows.
 
 ### Compilar iOS con Codemagic
 
@@ -172,7 +172,7 @@ SplitEasy no utiliza autenticación ni un backend propio. Los datos se guardan e
 - **Editor:** Tiptap / ProseMirror.
 - **Datos locales:** Dexie sobre IndexedDB; Zustand para preferencias persistentes.
 - **IA:** Vercel AI SDK y adaptadores de Anthropic, OpenAI, Google y OpenRouter.
-- **Escritorio:** Electron y electron-updater.
+- **Escritorio:** Electron y actualizaciones desde los assets de GitHub Releases.
 - **Móvil:** Capacitor para Android e iOS; Codemagic compila el IPA firmado en macOS.
 - **Pruebas y calidad:** Vitest y ESLint.
 

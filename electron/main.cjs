@@ -1,34 +1,48 @@
 const { app, BrowserWindow, dialog, ipcMain, screen } = require("electron");
-const { autoUpdater } = require("electron-updater");
+const { spawn } = require("node:child_process");
+const fs = require("node:fs/promises");
 const path = require("path");
 const { pathToFileURL } = require("node:url");
+const { downloadWindowsInstaller, fetchLatestWindowsInstaller } = require("./release-updater.cjs");
 
 // IndexedDB and localStorage are scoped to the origin, including its port.
 const port = 41731;
 let mainWindow;
 
-autoUpdater.autoDownload = false;
-autoUpdater.autoInstallOnAppQuit = false;
-autoUpdater.on("download-progress", (progress) => {
-  if (mainWindow && !mainWindow.isDestroyed()) {
-    mainWindow.webContents.send("meld-updater:download-progress", { percent: progress.percent });
-  }
-});
-autoUpdater.on("error", (error) => {
-  console.error("No se pudo actualizar Meld:", error);
-});
-
 ipcMain.handle("meld-updater:install-latest", async (event) => {
-  if (event.sender !== mainWindow?.webContents) throw new Error("Solicitud de actualización no autorizada.");
+  if (event.sender !== mainWindow?.webContents)
+    throw new Error("Solicitud de actualización no autorizada.");
   if (!app.isPackaged || process.platform !== "win32") {
     throw new Error("La instalación automática solo está disponible en la aplicación de Windows.");
   }
 
-  const result = await autoUpdater.checkForUpdates();
-  if (!result?.isUpdateAvailable) return false;
+  const update = await fetchLatestWindowsInstaller(app.getVersion());
+  if (!update) return false;
 
-  await autoUpdater.downloadUpdate();
-  autoUpdater.quitAndInstall(true, true);
+  const updateDirectory = await fs.mkdtemp(path.join(app.getPath("temp"), "meld-update-"));
+  const installerPath = path.join(updateDirectory, update.asset.name);
+  try {
+    await downloadWindowsInstaller(update.asset, installerPath, (percent) => {
+      if (mainWindow && !mainWindow.isDestroyed()) {
+        mainWindow.webContents.send("meld-updater:download-progress", { percent });
+      }
+    });
+
+    const installer = spawn(
+      installerPath,
+      ["--updated", "/S", "--force-run", `/D=${path.dirname(app.getPath("exe"))}`],
+      { detached: true, stdio: "ignore" },
+    );
+    await new Promise((resolve, reject) => {
+      installer.once("spawn", resolve);
+      installer.once("error", reject);
+    });
+    installer.unref();
+    app.quit();
+  } catch (error) {
+    await fs.rm(updateDirectory, { recursive: true, force: true });
+    throw error;
+  }
   return true;
 });
 
@@ -60,7 +74,9 @@ async function waitForServer(url) {
     }
   }
 
-  throw new Error(`El servidor local de Meld no respondió en 30 segundos: ${lastError instanceof Error ? lastError.message : String(lastError)}`);
+  throw new Error(
+    `El servidor local de Meld no respondió en 30 segundos: ${lastError instanceof Error ? lastError.message : String(lastError)}`,
+  );
 }
 
 async function createWindow() {
