@@ -11,6 +11,7 @@ import {
   Eye,
   EyeOff,
   FileArchive,
+  FileText,
   Fingerprint,
   Github,
   LockKeyhole,
@@ -442,191 +443,229 @@ function Settings() {
       </header>
       <h1 className="px-5 pb-4 pt-4 text-[34px] font-bold tracking-tight">Ajustes</h1>
 
-      <div className="grid grid-cols-1 items-start gap-6 px-4 lg:grid-cols-2">
+      <div className="px-4">
         <Section title="Sincronización entre dispositivos">
           <SyncModal />
         </Section>
+      </div>
 
-        <Section title="Inteligencia artificial">
-          <ApiSection />
-        </Section>
+      <div className="mt-6 grid grid-cols-1 items-start gap-6 px-4 lg:grid-cols-2">
+        <div className="flex flex-col gap-6">
+          <Section title="Inteligencia artificial">
+            <ApiSection />
+          </Section>
 
-        <Section title="Permisos por defecto de la IA" delay={0.04}>
-          <AccessList target="defaults" />
-          <div className="px-2 pb-1 pt-1">
-            <button
-              type="button"
-              onClick={() => {
-                s.resetAccessToDefault();
-                toast.success("Permisos aplicados");
-              }}
-              className="h-10 w-full rounded-2xl bg-muted text-sm font-medium"
-            >
-              Aplicar ahora al chat
-            </button>
-          </div>
-        </Section>
+          <Section title="Permisos por defecto de la IA" delay={0.04}>
+            <AccessList target="defaults" />
+            <div className="px-2 pb-1 pt-1">
+              <button
+                type="button"
+                onClick={() => {
+                  s.resetAccessToDefault();
+                  toast.success("Permisos aplicados");
+                }}
+                className="h-10 w-full rounded-2xl bg-muted text-sm font-medium"
+              >
+                Aplicar ahora al chat
+              </button>
+            </div>
+          </Section>
 
-        <Section title="Apariencia" delay={0.08}>
-          <Row label="Tema">
-            <GlassSegmented
-              layoutId="theme"
-              size="sm"
-              value={s.theme}
-              onChange={s.setTheme}
-              options={[
-                { value: "dark", label: "Oscuro" },
-                { value: "light", label: "Claro" },
-              ]}
-            />
-          </Row>
-          <Row label="Reducir animaciones" hint="Menos movimiento en toda la app">
-            <GlassSwitch
-              checked={s.reduceMotion}
-              onChange={s.setReduceMotion}
-              label="Reducir animaciones"
-            />
-          </Row>
-          <Row label="Idioma">
-            <span className="text-sm text-muted-foreground">Español</span>
-          </Row>
-        </Section>
+          <Section title="Apariencia" delay={0.08}>
+            <Row label="Tema">
+              <GlassSegmented
+                layoutId="theme"
+                size="sm"
+                value={s.theme}
+                onChange={s.setTheme}
+                options={[
+                  { value: "dark", label: "Oscuro" },
+                  { value: "light", label: "Claro" },
+                ]}
+              />
+            </Row>
+            <Row label="Reducir animaciones" hint="Menos movimiento en toda la app">
+              <GlassSwitch
+                checked={s.reduceMotion}
+                onChange={s.setReduceMotion}
+                label="Reducir animaciones"
+              />
+            </Row>
+            <Row label="Idioma">
+              <span className="text-sm text-muted-foreground">Español</span>
+            </Row>
+          </Section>
+        </div>
 
-        <Section title="Diario" delay={0.12}>
-          <Row
-            label="Activar diario"
-            hint={
-              s.journalEnabled
-                ? "Visible en la app y en el acceso de la IA"
-                : "Tus entradas se conservan aunque lo desactives"
-            }
-          >
-            <GlassSwitch
-              checked={s.journalEnabled}
-              onChange={s.setJournalEnabled}
+        <div className="flex flex-col gap-6">
+          <SecuritySection />
+
+          <NotificationsSection />
+
+          <Section title="Diario" delay={0.12}>
+            <Row
               label="Activar diario"
-            />
-          </Row>
-          <Row
-            label="Bloquear entradas pasadas"
-            hint="Protege las entradas de días anteriores frente a modificaciones accidentales."
-          >
-            <GlassSwitch
-              checked={s.lockPastJournalEntries}
-              onChange={s.setLockPastJournalEntries}
-              label="Bloquear entradas pasadas"
-            />
-          </Row>
-        </Section>
-
-        <SecuritySection />
-
-        <NotificationsSection />
-
-        <Section title="Tus datos" delay={0.16}>
-          <p className="px-3 pb-2 pt-1 text-xs text-muted-foreground">
-            Todo se guarda en este dispositivo. Haz copias de vez en cuando.
-          </p>
-          <Link
-            to="/papelera"
-            className="flex items-center gap-3 rounded-2xl px-3 py-2.5 transition-colors hover:bg-muted"
-          >
-            <Trash2 className="h-4 w-4 text-muted-foreground" />
-            <span className="flex-1 text-[15px] font-medium">Papelera de reciclaje</span>
-            <span className="text-sm text-muted-foreground">{trashCount ?? 0}</span>
-            <ArrowRight className="h-4 w-4 text-muted-foreground" />
-          </Link>
-          <div className="grid grid-cols-2 gap-2 p-1">
-            <DataButton
-              icon={<Download className="h-4 w-4" />}
-              label="Exportar JSON"
-              onClick={() => void downloadJson()}
-            />
-            <DataButton
-              icon={<FileArchive className="h-4 w-4" />}
-              label="Exportar ZIP (.md)"
-              onClick={() => void downloadZip()}
-            />
-            <DataButton
-              icon={<Upload className="h-4 w-4" />}
-              label="Importar JSON"
-              onClick={() => fileRef.current?.click()}
-            />
-            <DataButton
-              icon={<Trash2 className="h-4 w-4" />}
-              label="Borrar todo"
-              danger
-              onClick={() => setConfirmWipe(true)}
-            />
-          </div>
-          <input
-            ref={fileRef}
-            type="file"
-            accept="application/json,.json"
-            className="hidden"
-            onChange={async (e) => {
-              const f = e.target.files?.[0];
-              e.target.value = "";
-              if (!f) return;
-              try {
-                await importJson(f);
-                toast.success("Datos importados");
-              } catch (err) {
-                toast.error(err instanceof Error ? err.message : "No se pudo importar");
+              hint={
+                s.journalEnabled
+                  ? "Visible en la app y en el acceso de la IA"
+                  : "Tus entradas se conservan aunque lo desactives"
               }
-            }}
-          />
-        </Section>
+            >
+              <GlassSwitch
+                checked={s.journalEnabled}
+                onChange={s.setJournalEnabled}
+                label="Activar diario"
+              />
+            </Row>
+            <Row
+              label="Bloquear entradas pasadas"
+              hint="Protege las entradas de días anteriores frente a modificaciones accidentales."
+            >
+              <GlassSwitch
+                checked={s.lockPastJournalEntries}
+                onChange={s.setLockPastJournalEntries}
+                label="Bloquear entradas pasadas"
+              />
+            </Row>
+          </Section>
 
+          <Section title="Tus datos" delay={0.16}>
+            <p className="px-3 pb-2 pt-1 text-xs text-muted-foreground">
+              Todo se guarda en este dispositivo. Haz copias de vez en cuando.
+            </p>
+            <Link
+              to="/papelera"
+              className="flex items-center gap-3 rounded-2xl px-3 py-2.5 transition-colors hover:bg-muted"
+            >
+              <Trash2 className="h-4 w-4 text-muted-foreground" />
+              <span className="flex-1 text-[15px] font-medium">Papelera de reciclaje</span>
+              <span className="text-sm text-muted-foreground">{trashCount ?? 0}</span>
+              <ArrowRight className="h-4 w-4 text-muted-foreground" />
+            </Link>
+            <div className="grid grid-cols-2 gap-2 p-1">
+              <DataButton
+                icon={<Download className="h-4 w-4" />}
+                label="Exportar JSON"
+                onClick={() => void downloadJson()}
+              />
+              <DataButton
+                icon={<FileArchive className="h-4 w-4" />}
+                label="Exportar ZIP (.md)"
+                onClick={() => void downloadZip()}
+              />
+              <DataButton
+                icon={<Upload className="h-4 w-4" />}
+                label="Importar JSON"
+                onClick={() => fileRef.current?.click()}
+              />
+              <DataButton
+                icon={<Trash2 className="h-4 w-4" />}
+                label="Borrar todo"
+                danger
+                onClick={() => setConfirmWipe(true)}
+              />
+            </div>
+            <input
+              ref={fileRef}
+              type="file"
+              accept="application/json,.json"
+              className="hidden"
+              onChange={async (e) => {
+                const f = e.target.files?.[0];
+                e.target.value = "";
+                if (!f) return;
+                try {
+                  await importJson(f);
+                  toast.success("Datos importados");
+                } catch (err) {
+                  toast.error(err instanceof Error ? err.message : "No se pudo importar");
+                }
+              }}
+            />
+          </Section>
+        </div>
+      </div>
+
+      <div className="mt-6 px-4">
         <Section title="Acerca de" delay={0.2}>
-          <Row label="Meld" hint="Organización personal con IA. Privada y en local.">
-            <span className="text-sm text-muted-foreground">v{APP_VERSION}</span>
-          </Row>
-          <Row label="Privacidad y datos" hint="Datos locales; P2P opcional entre tus dispositivos">
-            <button
-              type="button"
-              onClick={() => setShowPrivacy(true)}
-              className="text-xs font-medium text-primary hover:underline"
-            >
-              Ver política
-            </button>
-          </Row>
-          <Row label="Soporte" hint="Contacto y dudas">
-            <a
-              href="mailto:soporte@seacraft2.net"
-              className="text-xs text-muted-foreground hover:text-foreground"
-            >
-              soporte@seacraft2.net
-            </a>
-          </Row>
-          <div className="flex flex-wrap gap-2 px-3 pb-2 pt-1">
-            <a
-              href="https://github.com/GALHAKPRO988/Meld"
-              target="_blank"
-              rel="noreferrer"
-              className={cn(
-                "glass inline-flex h-10 items-center gap-2 rounded-full px-4 text-sm font-medium transition-colors hover:text-coral",
-              )}
-            >
-              <span className="relative z-10 inline-flex items-center gap-2">
-                <Github className="h-4 w-4" /> GitHub <ExternalLink className="h-3.5 w-3.5" />
-              </span>
-            </a>
-            <button
-              type="button"
-              onClick={() => void searchUpdates()}
-              disabled={checkingUpdates}
-              className={cn(
-                "glass inline-flex h-10 items-center gap-2 rounded-full px-4 text-sm font-medium transition-colors hover:text-coral disabled:cursor-wait disabled:opacity-60",
-              )}
-            >
-              <span className="relative z-10 inline-flex items-center gap-2">
-                <RefreshCw className={cn("h-4 w-4", checkingUpdates && "animate-spin")} />
-                {checkingUpdates ? "Buscando..." : "Buscar actualizaciones"}
-              </span>
-            </button>
+          <div className="grid gap-3 p-1 md:grid-cols-3">
+            <div className="rounded-2xl border border-white/5 bg-muted/35 p-4">
+              <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                Tu espacio
+              </p>
+              <div className="mt-3 flex items-center justify-between gap-3">
+                <span className="text-lg font-semibold tracking-tight">Meld</span>
+                <span className="rounded-full bg-background/70 px-2.5 py-1 text-xs text-muted-foreground">
+                  v{APP_VERSION}
+                </span>
+              </div>
+              <p className="mt-1 text-sm text-muted-foreground">
+                Organización personal con IA, privada y en local.
+              </p>
+            </div>
+
+            <div className="rounded-2xl border border-white/5 bg-muted/35 p-4">
+              <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                Privacidad y ayuda
+              </p>
+              <p className="mt-3 text-sm text-muted-foreground">
+                Tus datos permanecen en el dispositivo. Consulta cómo funciona Meld o ponte en
+                contacto con soporte.
+              </p>
+              <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-2">
+                <button
+                  type="button"
+                  onClick={() => setShowPrivacy(true)}
+                  className="text-sm font-medium text-primary hover:underline"
+                >
+                  Ver política
+                </button>
+                <a
+                  href="mailto:soporte@seacraft2.net"
+                  className="text-sm text-muted-foreground transition-colors hover:text-foreground"
+                >
+                  Contactar soporte
+                </a>
+              </div>
+            </div>
+
+            <div className="rounded-2xl border border-white/5 bg-muted/35 p-4">
+              <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                Comunidad y actualizaciones
+              </p>
+              <div className="mt-3 flex flex-wrap gap-2">
+                <a
+                  href="https://github.com/GALHAKPRO988/Meld"
+                  target="_blank"
+                  rel="noreferrer"
+                  className="glass inline-flex h-10 items-center gap-2 rounded-full px-4 text-sm font-medium transition-colors hover:text-coral"
+                >
+                  <Github className="h-4 w-4" />
+                  GitHub
+                  <ExternalLink className="h-3.5 w-3.5" />
+                </a>
+                <button
+                  type="button"
+                  onClick={() => void searchUpdates()}
+                  disabled={checkingUpdates}
+                  className="glass inline-flex h-10 items-center gap-2 rounded-full px-4 text-sm font-medium transition-colors hover:text-coral disabled:cursor-wait disabled:opacity-60"
+                >
+                  <RefreshCw className={cn("h-4 w-4", checkingUpdates && "animate-spin")} />
+                  {checkingUpdates ? "Buscando..." : "Buscar actualizaciones"}
+                </button>
+                <a
+                  href="/changelog/latest.md"
+                  target="_blank"
+                  rel="noreferrer"
+                  className="glass inline-flex h-10 items-center gap-2 rounded-full px-4 text-sm font-medium transition-colors hover:text-coral"
+                >
+                  <FileText className="h-4 w-4" />
+                  Changelog v{APP_VERSION}
+                </a>
+              </div>
+            </div>
           </div>
-          <p className="mx-3 mb-2 flex items-center gap-2 rounded-2xl bg-sage/10 px-3 py-2 text-xs text-muted-foreground">
+          <p className="mx-1 mb-1 flex items-center gap-2 rounded-2xl bg-sage/10 px-3 py-2.5 text-xs text-muted-foreground">
             <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-sage" />
             Datos locales · Solo se transfieren a otro dispositivo si inicias P2P
           </p>

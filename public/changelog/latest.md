@@ -19,3 +19,6 @@
 - **Portadas para páginas**: Añade imágenes locales y gradientes a tus páginas, con miniaturas en las vistas de lista y tarjetas.
 - **Papelera de reciclaje**: Restaura páginas y tareas borradas o elimínalas definitivamente cuando quieras.
 - **Escritorio más cómodo**: Ventana maximizada al iniciar y barras de desplazamiento Liquid Glass adaptadas al tema.
+- **Ajustes reorganizados**: Sincronización destacada a ancho completo, preferencias del Diario en el panel y sección Acerca de final a ancho completo.
+- **Changelog accesible**: Consulta las novedades de Meld directamente desde Comunidad y actualizaciones en Ajustes.
+- **APK actualizado**: La versión Android también muestra v1.1.0 en sus metadatos.

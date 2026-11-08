@@ -1,7 +1,7 @@
 import { Peer, type DataConnection } from "peerjs";
 import { QRCodeSVG } from "qrcode.react";
 import { useEffect, useRef, useState } from "react";
-import { Copy, Radio, Smartphone, Trash2 } from "lucide-react";
+import { Copy, Radio, ShieldCheck, Smartphone, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
 import { useSettings, type LinkedDevice } from "@/lib/settings";
@@ -257,39 +257,58 @@ export function SyncModal() {
 
   return (
     <>
-      <div className="p-3">
-        <div className="flex items-start gap-3">
-          <div className="grid h-11 w-11 shrink-0 place-items-center rounded-2xl bg-primary/10 text-primary">
-            <Radio className="h-5 w-5" />
+      <div className="p-3 sm:p-4">
+        <div className="flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
+          <div className="flex min-w-0 items-start gap-3.5">
+            <div className="grid h-12 w-12 shrink-0 place-items-center rounded-2xl bg-primary/10 text-primary">
+              <Radio className="h-5 w-5" />
+            </div>
+            <div className="min-w-0">
+              <div className="flex flex-wrap items-center gap-2">
+                <h3 className="font-semibold">Sincroniza tus dispositivos</h3>
+                <span className="rounded-full bg-muted px-2.5 py-1 text-[11px] font-medium text-muted-foreground">
+                  {settings.linkedDevices.length}{" "}
+                  {settings.linkedDevices.length === 1
+                    ? "dispositivo vinculado"
+                    : "dispositivos vinculados"}
+                </span>
+              </div>
+              <p className="mt-1 max-w-2xl text-sm text-muted-foreground">
+                Conecta este equipo con tu móvil o portátil y sincroniza cuando tú quieras.
+                Necesitarás conexión a internet para iniciar el vínculo.
+              </p>
+              <div className="mt-3 flex max-w-3xl items-start gap-2 rounded-2xl bg-primary/5 px-3 py-2.5 text-xs leading-relaxed text-muted-foreground">
+                <ShieldCheck className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
+                <span>
+                  Tus datos no se guardan en servidores: tras conectar, se transfieren cifrados
+                  directamente entre tus dispositivos.
+                </span>
+              </div>
+            </div>
           </div>
-          <div className="min-w-0 flex-1">
-            <div className="font-semibold">Sincronizar dispositivos</div>
-            <p className="mt-1 text-xs text-muted-foreground">
-              Vincula tu PC, móvil o portátil directamente.
-            </p>
-            <button
-              type="button"
-              onClick={() => {
-                setRole("host");
-                setOpen(true);
-              }}
-              className="mt-3 h-10 rounded-full bg-primary px-4 text-sm font-semibold text-primary-foreground"
-            >
-              <span className="inline-flex items-center gap-2">
-                <Smartphone className="h-4 w-4" />
-                Vincular dispositivo
-              </span>
-            </button>
-          </div>
+          <button
+            type="button"
+            onClick={() => {
+              setRole("host");
+              setOpen(true);
+            }}
+            className="inline-flex h-11 shrink-0 items-center justify-center gap-2 rounded-full bg-primary px-5 text-sm font-semibold text-primary-foreground transition-colors hover:bg-primary/90"
+          >
+            <Smartphone className="h-4 w-4" />
+            Abrir menú de sincronización
+          </button>
         </div>
       </div>
       {settings.linkedDevices.length > 0 && (
-        <div className="space-y-1 px-2 pb-2">
+        <div className="space-y-1 border-t border-border/60 px-2 pb-2 pt-1">
           <h3 className="px-3 pt-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
             Dispositivos vinculados
           </h3>
           {settings.linkedDevices.map((device) => (
-            <div key={device.id} className="flex items-center gap-3 rounded-2xl px-3 py-2.5">
+            <div
+              key={device.id}
+              className="flex flex-col gap-3 rounded-2xl px-3 py-2.5 sm:flex-row sm:items-center"
+            >
               <Smartphone className="h-4 w-4 text-muted-foreground" />
               <div className="min-w-0 flex-1">
                 <div className="truncate text-sm font-medium">{device.name}</div>
