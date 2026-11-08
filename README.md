@@ -35,6 +35,7 @@
 - Usa formato enriquecido, encabezados, listas y listas de tareas, tablas, bloques de código con resaltado, imágenes, callouts, desplegables y fórmulas.
 - Crea enlaces entre páginas escribiendo `[[` y copia el contenido como Markdown.
 - Organiza páginas en carpetas y con tags; fíjalas para tenerlas a mano.
+- Usa las plantillas integradas o guarda cualquier página como plantilla reutilizable.
 - Los adjuntos se guardan localmente junto a tus datos.
 
 ### Tareas
@@ -60,6 +61,13 @@
 - El diario es opcional y está desactivado inicialmente.
 - Escribe una entrada por día, añade un estado de ánimo y consulta tu racha.
 - Desactivarlo oculta la sección, pero no elimina tus entradas.
+- Protege toda la app o solo el Diario con PIN local, biometría compatible y auto-bloqueo.
+
+### Sincronización entre dispositivos
+
+- Vincula dispositivos con un código QR o enlace y sincroniza copiando, sobrescribiendo o fusionando cambios.
+- La transferencia de datos se realiza cifrada directamente entre dispositivos mediante WebRTC; un servicio de señalización intercambia metadatos de conexión y STUN ayuda a establecer la conexión. Estos servicios no reciben ni almacenan el contenido.
+- Ambos dispositivos deben estar conectados a Internet y Meld debe estar abierto en modo anfitrión durante la conexión.
 
 ### Asistente de IA opcional
 
@@ -76,7 +84,7 @@
 ## Privacidad y almacenamiento
 
 - **Datos de la app:** páginas, tareas, eventos, diario, chats y adjuntos se almacenan localmente en IndexedDB mediante Dexie. La configuración, incluidas las claves de API, se conserva en el almacenamiento local del navegador.
-- **Sin cuenta ni sincronización de Meld:** el proyecto no proporciona un backend para guardar o sincronizar tus datos.
+- **Sin cuenta ni almacenamiento en la nube:** Meld no proporciona un backend ni una base de datos en la nube. La sincronización P2P es opcional y transfiere los datos directamente entre los dispositivos vinculados. El servicio de señalización y STUN pueden ver metadatos de conexión, como las direcciones IP, pero no reciben ni almacenan el contenido.
 - **IA bajo tu control:** si usas el asistente, el texto de tu solicitud y el contexto permitido por tus ajustes se envían directamente desde tu dispositivo al proveedor elegido. Meld no opera un servidor intermediario para esas llamadas. El proveedor procesa las solicitudes según sus propias condiciones.
 - **Claves API:** se guardan en el almacenamiento local del navegador y no están cifradas por Meld. Usa claves con límites de gasto y evita guardar claves en dispositivos compartidos.
 - **Actualizaciones:** la comprobación de versiones consulta la API pública de GitHub Releases. La actualización automática de Windows usa además los artefactos publicados en esa release.
@@ -123,19 +131,19 @@ El servidor de desarrollo mostrará la dirección local en la terminal.
 
 ### Comandos
 
-| Comando | Uso |
-| --- | --- |
-| `npm run dev` | Inicia el servidor de desarrollo. |
-| `npm run build` | Genera el build de producción web/SSR. |
-| `npm run build:ios` | Genera el shell SPA local que carga Capacitor para iOS. |
-| `npx cap sync ios` | Copia el build web y sincroniza los plugins nativos de iOS. |
-| `npm run preview` | Previsualiza el build de producción. |
-| `npm test` | Ejecuta las pruebas una vez. |
-| `npm run test:watch` | Ejecuta las pruebas en modo watch. |
-| `npm run lint` | Ejecuta ESLint. |
-| `npm run pack:win` | Empaqueta la app de Windows sin crear instalador. |
-| `npm run dist:win` | Genera el instalador de Windows. |
-| `npm run release:win` | Genera y publica una release de Windows en GitHub. |
+| Comando               | Uso                                                         |
+| --------------------- | ----------------------------------------------------------- |
+| `npm run dev`         | Inicia el servidor de desarrollo.                           |
+| `npm run build`       | Genera el build de producción web/SSR.                      |
+| `npm run build:ios`   | Genera el shell SPA local que carga Capacitor para iOS.     |
+| `npx cap sync ios`    | Copia el build web y sincroniza los plugins nativos de iOS. |
+| `npm run preview`     | Previsualiza el build de producción.                        |
+| `npm test`            | Ejecuta las pruebas una vez.                                |
+| `npm run test:watch`  | Ejecuta las pruebas en modo watch.                          |
+| `npm run lint`        | Ejecuta ESLint.                                             |
+| `npm run pack:win`    | Empaqueta la app de Windows sin crear instalador.           |
+| `npm run dist:win`    | Genera el instalador de Windows.                            |
+| `npm run release:win` | Genera y publica una release de Windows en GitHub.          |
 
 ### Publicar una release de Windows
 

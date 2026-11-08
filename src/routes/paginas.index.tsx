@@ -7,12 +7,17 @@ import { PageHeader } from "@/components/PageHeader";
 import { GlassButton, GlassSegmented } from "@/components/glass/Glass";
 import { db, newPage, type Page } from "@/lib/db";
 import { cn } from "@/lib/utils";
+import { TemplatePicker } from "@/components/templates/TemplatePicker";
+import { useAttachmentUrl } from "@/lib/attachments";
 
 export const Route = createFileRoute("/paginas/")({
   head: () => ({
     meta: [
       { title: "Páginas · Meld" },
-      { name: "description", content: "Tus notas y documentos en Meld, guardados en tu dispositivo." },
+      {
+        name: "description",
+        content: "Tus notas y documentos en Meld, guardados en tu dispositivo.",
+      },
       { property: "og:title", content: "Páginas · Meld" },
       { property: "og:description", content: "Notas y documentos guardados en local." },
       { property: "og:type", content: "website" },
@@ -38,8 +43,17 @@ const preview = (md: string) =>
     .trim()
     .slice(0, 140);
 
+function PageThumbnail({ cover, alt }: { cover: string; alt: string }) {
+  const url = useAttachmentUrl(cover);
+  if (cover.startsWith("linear-gradient")) {
+    return <div className="h-full w-full" style={{ background: cover }} />;
+  }
+  if (!url) return <div className="h-full w-full animate-pulse bg-muted/40" />;
+  return <img src={url} alt={alt} className="h-full w-full object-cover" />;
+}
+
 function PagesList() {
-  const pages = useLiveQuery(() => db.pages.toArray(), []);
+  const pages = useLiveQuery(async () => (await db.pages.toArray()).filter((page) => !page.deletedAt), []);
   const [q, setQ] = useState("");
   const [sort, setSort] = useState<"recent" | "alpha">("recent");
   const [view, setView] = useState<"list" | "cards">("cards");
@@ -47,20 +61,32 @@ function PagesList() {
 
   const list = useMemo(() => {
     const ql = q.toLowerCase();
-    const filtered = (pages ?? []).filter((p) => !ql || p.title.toLowerCase().includes(ql) || p.markdown.toLowerCase().includes(ql));
-    filtered.sort((a, b) =>
-      b.pinned - a.pinned || (sort === "recent" ? b.updatedAt - a.updatedAt : (a.title || "￿").localeCompare(b.title || "￿", "es")),
+    const filtered = (pages ?? []).filter(
+      (p) => !ql || p.title.toLowerCase().includes(ql) || p.markdown.toLowerCase().includes(ql),
+    );
+    filtered.sort(
+      (a, b) =>
+        b.pinned - a.pinned ||
+        (sort === "recent"
+          ? b.updatedAt - a.updatedAt
+          : (a.title || "￿").localeCompare(b.title || "￿", "es")),
     );
     return filtered;
   }, [pages, q, sort]);
 
-  const create = async () => {
-    const p = newPage();
+  const create = async (template?: {
+    title: string;
+    icon: string;
+    html: string;
+    markdown: string;
+  }) => {
+    const p = newPage(template ? { ...template } : {});
     await db.pages.add(p);
     void navigate({ to: "/paginas/$pageId", params: { pageId: p.id } });
   };
 
-  const togglePin = (p: Page) => db.pages.update(p.id, { pinned: p.pinned ? 0 : 1 });
+  const togglePin = (p: Page) =>
+    db.pages.update(p.id, { pinned: p.pinned ? 0 : 1, updatedAt: Date.now() });
 
   return (
     <div className="pb-safe min-h-dvh pb-28">
@@ -69,9 +95,16 @@ function PagesList() {
         title="Páginas"
         subtitle={pages ? `${pages.length} ${pages.length === 1 ? "página" : "páginas"}` : " "}
         actions={
-          <GlassButton size="md" aria-label={view === "cards" ? "Vista de lista" : "Vista de tarjetas"} onClick={() => setView((v) => (v === "cards" ? "list" : "cards"))}>
-            {view === "cards" ? <List className="h-5 w-5" /> : <LayoutGrid className="h-5 w-5" />}
-          </GlassButton>
+          <>
+            <TemplatePicker onSelect={(template) => void create(template)} />
+            <GlassButton
+              size="md"
+              aria-label={view === "cards" ? "Vista de lista" : "Vista de tarjetas"}
+              onClick={() => setView((v) => (v === "cards" ? "list" : "cards"))}
+            >
+              {view === "cards" ? <List className="h-5 w-5" /> : <LayoutGrid className="h-5 w-5" />}
+            </GlassButton>
+          </>
         }
       />
       <div className="flex flex-col gap-3 px-4">
@@ -102,12 +135,25 @@ function PagesList() {
             ))}
           </div>
         ) : list.length === 0 ? (
-          <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="py-16 text-center">
+          <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="py-16 text-center"
+          >
             <div className="mb-2 text-4xl">📝</div>
-            <p className="text-muted-foreground">{q ? "Nada coincide con tu búsqueda." : "Aún no tienes páginas."}</p>
+            <p className="text-muted-foreground">
+              {q ? "Nada coincide con tu búsqueda." : "Aún no tienes páginas."}
+            </p>
           </motion.div>
         ) : (
-          <motion.ul layout className={cn(view === "cards" ? "grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-4" : "flex flex-col gap-2")}>
+          <motion.ul
+            layout
+            className={cn(
+              view === "cards"
+                ? "grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-4"
+                : "flex flex-col gap-2",
+            )}
+          >
             <AnimatePresence>
               {list.map((p, i) => (
                 <motion.li
@@ -116,7 +162,12 @@ function PagesList() {
                   initial={{ opacity: 0, y: 14, scale: 0.97 }}
                   animate={{ opacity: 1, y: 0, scale: 1 }}
                   exit={{ opacity: 0, scale: 0.9 }}
-                  transition={{ delay: Math.min(i, 10) * 0.03, type: "spring", stiffness: 380, damping: 30 }}
+                  transition={{
+                    delay: Math.min(i, 10) * 0.03,
+                    type: "spring",
+                    stiffness: 380,
+                    damping: 30,
+                  }}
                   className="relative"
                 >
                   <Link
@@ -124,27 +175,64 @@ function PagesList() {
                     params={{ pageId: p.id }}
                     className={cn(
                       "glass block rounded-3xl p-3.5 transition-transform active:scale-[0.98]",
-                      view === "cards" ? "h-36" : "flex items-center gap-3",
+                      view === "cards"
+                        ? p.cover
+                          ? "min-h-52"
+                          : "h-36"
+                        : "flex items-center gap-3",
                     )}
                   >
-                    <div className={cn("relative z-10", view === "list" && "flex min-w-0 flex-1 items-center gap-3")}>
-                      <div className={cn("text-2xl", view === "cards" && "mb-1.5")}>{p.icon}</div>
+                    {view === "cards" && p.cover && (
+                      <div className="relative z-10 mb-2 h-24 w-full overflow-hidden rounded-2xl">
+                        <PageThumbnail cover={p.cover} alt={p.title || "Portada de página"} />
+                        <div className="absolute bottom-2 left-2 grid h-9 w-9 place-items-center rounded-xl border border-white/15 bg-background/45 text-xl shadow-sm backdrop-blur-md">
+                          <span className="relative z-10">{p.icon}</span>
+                        </div>
+                      </div>
+                    )}
+                    <div
+                      className={cn(
+                        "relative z-10",
+                        view === "list" && "flex min-w-0 flex-1 items-center gap-3",
+                      )}
+                    >
+                      {view === "list" && p.cover && (
+                        <div className="h-10 w-10 shrink-0 overflow-hidden rounded-xl border border-white/10">
+                          <PageThumbnail cover={p.cover} alt={p.title || "Portada de página"} />
+                        </div>
+                      )}
+                      {(!p.cover || view === "list") && (
+                        <div className={cn("text-2xl", view === "cards" && "mb-1.5")}>{p.icon}</div>
+                      )}
                       <div className="min-w-0 flex-1">
-                        <div className="truncate pr-6 text-[15px] font-semibold">{p.title || "Sin título"}</div>
+                        <div className="truncate pr-6 text-[15px] font-semibold">
+                          {p.title || "Sin título"}
+                        </div>
                         {view === "cards" ? (
-                          <p className="mt-1 line-clamp-2 text-xs text-muted-foreground">{preview(p.markdown) || "Vacía"}</p>
+                          <p className="mt-1 line-clamp-2 text-xs text-muted-foreground">
+                            {preview(p.markdown) || "Vacía"}
+                          </p>
                         ) : (
-                          <p className="truncate text-xs text-muted-foreground">{rel(p.updatedAt)}</p>
+                          <p className="truncate text-xs text-muted-foreground">
+                            {rel(p.updatedAt)}
+                          </p>
                         )}
                       </div>
                     </div>
-                    {view === "cards" && <div className="relative z-10 mt-1 text-[11px] text-muted-foreground">{rel(p.updatedAt)}</div>}
+                    {view === "cards" && (
+                      <div className="relative z-10 mt-1 text-[11px] text-muted-foreground">
+                        {rel(p.updatedAt)}
+                      </div>
+                    )}
                   </Link>
                   <button
                     type="button"
                     onClick={() => void togglePin(p)}
                     aria-label={p.pinned ? "Desfijar" : "Fijar"}
-                    className={cn("absolute right-2.5 top-2.5 z-20 rounded-full p-1.5", p.pinned ? "text-coral" : "text-muted-foreground/50")}
+                    className={cn(
+                      "absolute right-2.5 top-2.5 z-20 rounded-full p-1.5",
+                      p.pinned ? "text-coral" : "text-muted-foreground/50",
+                    )}
                   >
                     <Pin className="h-3.5 w-3.5" fill={p.pinned ? "currentColor" : "none"} />
                   </button>
@@ -155,8 +243,13 @@ function PagesList() {
         )}
       </div>
 
-      <div className="pb-safe app-col fixed inset-x-0 bottom-0 z-30 flex lg:hidden justify-end px-5 pb-5">
-        <GlassButton aria-label="Nueva página" onClick={() => void create()} className="glass-strong">
+      <div className="pb-safe app-col fixed inset-x-0 bottom-0 z-30 flex lg:hidden items-center justify-end gap-2 px-5 pb-5">
+        <TemplatePicker onSelect={(template) => void create(template)} />
+        <GlassButton
+          aria-label="Nueva página"
+          onClick={() => void create()}
+          className="glass-strong"
+        >
           <Plus className="h-7 w-7" />
         </GlassButton>
       </div>

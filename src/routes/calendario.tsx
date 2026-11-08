@@ -64,7 +64,10 @@ function CalendarScreen() {
   }, [view, cursor]);
 
   const events = useLiveQuery(() => db.events.toArray(), []) ?? [];
-  const tasks = useLiveQuery(() => db.tasks.where("due").between(range[0], range[1], true, false).toArray(), [range[0], range[1]]) ?? [];
+  const tasks = useLiveQuery(
+    async () => (await db.tasks.where("due").between(range[0], range[1], true, false).toArray()).filter((task) => !task.deletedAt),
+    [range[0], range[1]],
+  ) ?? [];
   const journalKeys = useLiveQuery(async () => (journalEnabled ? ((await db.journal.toCollection().primaryKeys()) as string[]) : []), [journalEnabled]) ?? [];
   const journalDays = useMemo(() => new Set(journalKeys), [journalKeys]);
   const occ = useMemo(() => expandEvents(events, range[0], range[1]), [events, range]);

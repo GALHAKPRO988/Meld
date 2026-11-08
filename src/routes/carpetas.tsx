@@ -4,7 +4,16 @@ import { useLiveQuery } from "dexie-react-hooks";
 import { AnimatePresence, motion } from "framer-motion";
 import { useMemo, useState } from "react";
 import { toast } from "sonner";
-import { ChevronRight, FolderInput, FolderPlus, LayoutGrid, ListTree, MoreHorizontal, Pencil, Trash2 } from "lucide-react";
+import {
+  ChevronRight,
+  FolderInput,
+  FolderPlus,
+  LayoutGrid,
+  ListTree,
+  MoreHorizontal,
+  Pencil,
+  Trash2,
+} from "lucide-react";
 import { PageHeader } from "@/components/PageHeader";
 import { GlassButton, GlassSheet } from "@/components/glass/Glass";
 import { FolderTreeSheet } from "@/components/FolderPicker";
@@ -12,7 +21,14 @@ import { IconPicker } from "@/components/IconPicker";
 import { DRAG_MIME, PageItem, SectionTitle, TaskItem } from "@/components/ItemRows";
 import { TaskEditSheet } from "@/components/tasks/TaskSheets";
 import { db, uid, type Folder, type Id, type Task } from "@/lib/db";
-import { childrenOf, deleteFolder, descendantIds, flattenTree, folderPath, moveFolder } from "@/lib/folders";
+import {
+  childrenOf,
+  deleteFolder,
+  descendantIds,
+  flattenTree,
+  folderPath,
+  moveFolder,
+} from "@/lib/folders";
 import { cn } from "@/lib/utils";
 
 interface FolderSearch {
@@ -20,7 +36,8 @@ interface FolderSearch {
 }
 
 export const Route = createFileRoute("/carpetas")({
-  validateSearch: (s: Record<string, unknown>): FolderSearch => (typeof s["id"] === "string" && s["id"] ? { id: s["id"] } : {}),
+  validateSearch: (s: Record<string, unknown>): FolderSearch =>
+    typeof s["id"] === "string" && s["id"] ? { id: s["id"] } : {},
   head: () => ({
     meta: [
       { title: "Carpetas · Meld" },
@@ -47,7 +64,13 @@ function Folders() {
   const [editing, setEditing] = useState<Task | null>(null);
 
   const data = useLiveQuery(async () => {
-    const [folders, pages, tasks] = await Promise.all([db.folders.toArray(), db.pages.toArray(), db.tasks.toArray()]);
+    const [folders, allPages, allTasks] = await Promise.all([
+      db.folders.toArray(),
+      db.pages.toArray(),
+      db.tasks.toArray(),
+    ]);
+    const pages = allPages.filter((page) => !page.deletedAt);
+    const tasks = allTasks.filter((task) => !task.deletedAt);
     return { folders, pages, tasks };
   }, []);
 
@@ -58,32 +81,42 @@ function Folders() {
 
   const counts = useMemo(() => {
     const m = new Map<Id | null, number>();
-    for (const x of [...(data?.pages ?? []), ...(data?.tasks ?? [])]) m.set(x.folderId, (m.get(x.folderId) ?? 0) + 1);
+    for (const x of [...(data?.pages ?? []), ...(data?.tasks ?? [])])
+      m.set(x.folderId, (m.get(x.folderId) ?? 0) + 1);
     for (const f of folders) if (f.parentId) m.set(f.parentId, (m.get(f.parentId) ?? 0) + 1);
     return m;
   }, [data, folders]);
 
   const subfolders = childrenOf(folders, currentId);
-  const pages = (data?.pages ?? []).filter((p) => p.folderId === currentId).sort((a, b) => b.updatedAt - a.updatedAt);
-  const tasks = (data?.tasks ?? []).filter((t) => t.folderId === currentId).sort((a, b) => Number(a.status === "done") - Number(b.status === "done") || a.order - b.order);
+  const pages = (data?.pages ?? [])
+    .filter((p) => p.folderId === currentId)
+    .sort((a, b) => b.updatedAt - a.updatedAt);
+  const tasks = (data?.tasks ?? [])
+    .filter((t) => t.folderId === currentId)
+    .sort((a, b) => Number(a.status === "done") - Number(b.status === "done") || a.order - b.order);
   const open = (fid: Id | null) => void navigate({ search: fid ? { id: fid } : {} });
 
   const doMove = async (target: Id | null) => {
     if (!moving) return;
     try {
       if (moving.kind === "folder") await moveFolder(moving.id, target);
-      else if (moving.kind === "page") await db.pages.update(moving.id, { folderId: target, updatedAt: Date.now() });
+      else if (moving.kind === "page")
+        await db.pages.update(moving.id, { folderId: target, updatedAt: Date.now() });
       else await db.tasks.update(moving.id, { folderId: target, updatedAt: Date.now() });
       const name = target ? folders.find((f) => f.id === target)?.name : "Sin carpeta";
-      toast(`Movido a ${name}`, { action: { label: "Deshacer", onClick: () => void undoMove(moving) } });
+      toast(`Movido a ${name}`, {
+        action: { label: "Deshacer", onClick: () => void undoMove(moving) },
+      });
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "No se pudo mover");
     }
   };
   const undoMove = async (m: NonNullable<Moving>) => {
-    if (m.kind === "folder") await db.folders.update(m.id, { parentId: m.current });
-    else if (m.kind === "page") await db.pages.update(m.id, { folderId: m.current });
-    else await db.tasks.update(m.id, { folderId: m.current });
+    if (m.kind === "folder")
+      await db.folders.update(m.id, { parentId: m.current, updatedAt: Date.now() });
+    else if (m.kind === "page")
+      await db.pages.update(m.id, { folderId: m.current, updatedAt: Date.now() });
+    else await db.tasks.update(m.id, { folderId: m.current, updatedAt: Date.now() });
   };
 
   const [over, setOver] = useState<Id | null>(null);
@@ -101,14 +134,22 @@ function Folders() {
       const [kind, itemId] = e.dataTransfer.getData(DRAG_MIME).split(":") as ["page" | "task", Id];
       if (!itemId) return;
       const m = { kind, id: itemId, current: currentId } as NonNullable<Moving>;
-      if (kind === "page") await db.pages.update(itemId, { folderId: target, updatedAt: Date.now() });
+      if (kind === "page")
+        await db.pages.update(itemId, { folderId: target, updatedAt: Date.now() });
       else await db.tasks.update(itemId, { folderId: target, updatedAt: Date.now() });
-      toast(`Movido a ${folders.find((f) => f.id === target)?.name ?? "carpeta"}`, { action: { label: "Deshacer", onClick: () => void undoMove(m) } });
+      toast(`Movido a ${folders.find((f) => f.id === target)?.name ?? "carpeta"}`, {
+        action: { label: "Deshacer", onClick: () => void undoMove(m) },
+      });
     },
   });
 
   const moveBtn = (kind: "page" | "task", itemId: Id) => (
-    <button type="button" aria-label="Mover a otra carpeta" onClick={() => setMoving({ kind, id: itemId, current: currentId })} className="p-1.5 text-muted-foreground">
+    <button
+      type="button"
+      aria-label="Mover a otra carpeta"
+      onClick={() => setMoving({ kind, id: itemId, current: currentId })}
+      className="p-1.5 text-muted-foreground"
+    >
       <FolderInput className="h-4 w-4" />
     </button>
   );
@@ -119,7 +160,11 @@ function Folders() {
         <PageHeader title="Carpetas" />
         <div className="px-6 py-16 text-center">
           <p className="mb-4 text-muted-foreground">Esta carpeta ya no existe.</p>
-          <button type="button" onClick={() => open(null)} className="rounded-full bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground">
+          <button
+            type="button"
+            onClick={() => open(null)}
+            className="rounded-full bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground"
+          >
             Ver carpetas
           </button>
         </div>
@@ -152,16 +197,28 @@ function Folders() {
         actions={
           <>
             {!current && (
-              <GlassButton size="md" aria-label={tree ? "Vista de cuadrícula" : "Vista de árbol"} onClick={() => setTree((v) => !v)}>
+              <GlassButton
+                size="md"
+                aria-label={tree ? "Vista de cuadrícula" : "Vista de árbol"}
+                onClick={() => setTree((v) => !v)}
+              >
                 {tree ? <LayoutGrid className="h-5 w-5" /> : <ListTree className="h-5 w-5" />}
               </GlassButton>
             )}
             {current && (
-              <GlassButton size="md" aria-label="Opciones de carpeta" onClick={() => setOptions(true)}>
+              <GlassButton
+                size="md"
+                aria-label="Opciones de carpeta"
+                onClick={() => setOptions(true)}
+              >
                 <MoreHorizontal className="h-5 w-5" />
               </GlassButton>
             )}
-            <GlassButton size="md" aria-label={current ? "Nueva subcarpeta" : "Nueva carpeta"} onClick={() => setCreating(true)}>
+            <GlassButton
+              size="md"
+              aria-label={current ? "Nueva subcarpeta" : "Nueva carpeta"}
+              onClick={() => setCreating(true)}
+            >
               <FolderPlus className="h-5 w-5" />
             </GlassButton>
           </>
@@ -172,7 +229,15 @@ function Folders() {
         {tree && !current ? (
           <ul className="glass flex flex-col rounded-3xl p-1.5">
             {flattenTree(folders, collapsed).map(({ folder, depth, hasChildren }) => (
-              <li key={folder.id} {...dropProps(folder.id)} className={cn("relative z-10 flex items-center rounded-2xl", over === folder.id && "bg-primary/15 ring-1 ring-primary/50")} style={{ paddingLeft: depth * 18 }}>
+              <li
+                key={folder.id}
+                {...dropProps(folder.id)}
+                className={cn(
+                  "relative z-10 flex items-center rounded-2xl",
+                  over === folder.id && "bg-primary/15 ring-1 ring-primary/50",
+                )}
+                style={{ paddingLeft: depth * 18 }}
+              >
                 <button
                   type="button"
                   aria-label={collapsed.has(folder.id) ? "Expandir" : "Contraer"}
@@ -184,18 +249,36 @@ function Folders() {
                       return n;
                     })
                   }
-                  className={cn("grid h-9 w-7 place-items-center text-muted-foreground", !hasChildren && "invisible")}
+                  className={cn(
+                    "grid h-9 w-7 place-items-center text-muted-foreground",
+                    !hasChildren && "invisible",
+                  )}
                 >
-                  <ChevronRight className={cn("h-4 w-4 transition-transform", !collapsed.has(folder.id) && "rotate-90")} />
+                  <ChevronRight
+                    className={cn(
+                      "h-4 w-4 transition-transform",
+                      !collapsed.has(folder.id) && "rotate-90",
+                    )}
+                  />
                 </button>
-                <button type="button" onClick={() => open(folder.id)} className="flex min-w-0 flex-1 items-center gap-2.5 rounded-2xl px-2 py-2 text-left hover:bg-muted">
+                <button
+                  type="button"
+                  onClick={() => open(folder.id)}
+                  className="flex min-w-0 flex-1 items-center gap-2.5 rounded-2xl px-2 py-2 text-left hover:bg-muted"
+                >
                   <span className="text-lg">{folder.icon}</span>
                   <span className="flex-1 truncate text-[15px]">{folder.name}</span>
-                  <span className="text-xs text-muted-foreground">{counts.get(folder.id) ?? 0}</span>
+                  <span className="text-xs text-muted-foreground">
+                    {counts.get(folder.id) ?? 0}
+                  </span>
                 </button>
               </li>
             ))}
-            {folders.length === 0 && <li className="relative z-10 py-8 text-center text-sm text-muted-foreground">Aún no hay carpetas.</li>}
+            {folders.length === 0 && (
+              <li className="relative z-10 py-8 text-center text-sm text-muted-foreground">
+                Aún no hay carpetas.
+              </li>
+            )}
           </ul>
         ) : (
           <>
@@ -218,14 +301,16 @@ function Folders() {
                         onClick={() => open(f.id)}
                         className={cn(
                           "glass block w-full rounded-3xl p-4 text-left transition-all active:scale-[0.97]",
-                          over === f.id && "scale-[1.03] ring-2 ring-primary/60 shadow-[0_0_32px_-4px_var(--primary)]",
+                          over === f.id &&
+                            "scale-[1.03] ring-2 ring-primary/60 shadow-[0_0_32px_-4px_var(--primary)]",
                         )}
                       >
                         <div className="relative z-10">
                           <div className="mb-2 text-3xl">{f.icon}</div>
                           <div className="truncate pr-6 font-semibold">{f.name}</div>
                           <div className="text-xs text-muted-foreground">
-                            {counts.get(f.id) ?? 0} {(counts.get(f.id) ?? 0) === 1 ? "elemento" : "elementos"}
+                            {counts.get(f.id) ?? 0}{" "}
+                            {(counts.get(f.id) ?? 0) === 1 ? "elemento" : "elementos"}
                           </div>
                         </div>
                       </button>
@@ -243,14 +328,22 @@ function Folders() {
               </ul>
             )}
 
-            {!current && (pages.length > 0 || tasks.length > 0) && <SectionTitle>Sin carpeta</SectionTitle>}
+            {!current && (pages.length > 0 || tasks.length > 0) && (
+              <SectionTitle>Sin carpeta</SectionTitle>
+            )}
             {pages.length > 0 && (
               <>
                 {current && <SectionTitle>Páginas</SectionTitle>}
                 <ul className="flex flex-col gap-2">
                   <AnimatePresence>
                     {pages.map((p, i) => (
-                      <PageItem key={p.id} page={p} index={i} action={moveBtn("page", p.id)} dragData={`page:${p.id}`} />
+                      <PageItem
+                        key={p.id}
+                        page={p}
+                        index={i}
+                        action={moveBtn("page", p.id)}
+                        dragData={`page:${p.id}`}
+                      />
                     ))}
                   </AnimatePresence>
                 </ul>
@@ -262,16 +355,31 @@ function Folders() {
                 <ul className="flex flex-col gap-2">
                   <AnimatePresence>
                     {tasks.map((t, i) => (
-                      <TaskItem key={t.id} task={t} index={i} onOpen={() => setEditing(t)} action={moveBtn("task", t.id)} dragData={`task:${t.id}`} />
+                      <TaskItem
+                        key={t.id}
+                        task={t}
+                        index={i}
+                        onOpen={() => setEditing(t)}
+                        action={moveBtn("task", t.id)}
+                        dragData={`task:${t.id}`}
+                      />
                     ))}
                   </AnimatePresence>
                 </ul>
               </>
             )}
             {data && subfolders.length === 0 && pages.length === 0 && tasks.length === 0 && (
-              <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="py-16 text-center">
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                className="py-16 text-center"
+              >
                 <div className="mb-2 text-4xl">🗂️</div>
-                <p className="text-muted-foreground">{current ? "Carpeta vacía. Mueve aquí páginas o tareas." : "Crea tu primera carpeta con el botón de arriba."}</p>
+                <p className="text-muted-foreground">
+                  {current
+                    ? "Carpeta vacía. Mueve aquí páginas o tareas."
+                    : "Crea tu primera carpeta con el botón de arriba."}
+                </p>
               </motion.div>
             )}
           </>
@@ -294,35 +402,72 @@ function Folders() {
         value={moving?.current ?? null}
         onPick={(target) => void doMove(target)}
         rootLabel={moving?.kind === "folder" ? "Carpetas (raíz)" : "Sin carpeta"}
-        disabled={moving?.kind === "folder" ? new Set([moving.id, ...descendantIds(folders, moving.id)]) : new Set()}
+        disabled={
+          moving?.kind === "folder"
+            ? new Set([moving.id, ...descendantIds(folders, moving.id)])
+            : new Set()
+        }
       />
       <TaskEditSheet task={editing} onClose={() => setEditing(null)} />
     </div>
   );
 }
 
-function FolderSheet({ open, onClose, parentId }: { open: boolean; onClose: () => void; parentId: Id | null }) {
+function FolderSheet({
+  open,
+  onClose,
+  parentId,
+}: {
+  open: boolean;
+  onClose: () => void;
+  parentId: Id | null;
+}) {
   const [name, setName] = useState("");
   const [icon, setIcon] = useState("📁");
   return (
-    <GlassSheet open={open} onClose={onClose} title={parentId ? "Nueva subcarpeta" : "Nueva carpeta"}>
+    <GlassSheet
+      open={open}
+      onClose={onClose}
+      title={parentId ? "Nueva subcarpeta" : "Nueva carpeta"}
+    >
       <form
         className="flex flex-col gap-3"
         onSubmit={async (e) => {
           e.preventDefault();
           if (!name.trim()) return;
-          await db.folders.add({ id: uid(), name: name.trim(), icon, color: "oklch(0.72 0.15 40)", parentId, createdAt: Date.now() });
+          const now = Date.now();
+          await db.folders.add({
+            id: uid(),
+            name: name.trim(),
+            icon,
+            color: "oklch(0.72 0.15 40)",
+            parentId,
+            createdAt: now,
+            updatedAt: now,
+          });
           setName("");
           setIcon("📁");
           onClose();
         }}
       >
         <div className="flex items-center gap-2">
-          <span className="grid h-11 w-11 place-items-center rounded-2xl bg-muted text-2xl">{icon}</span>
-          <input autoFocus value={name} onChange={(e) => setName(e.target.value)} placeholder="Nombre de la carpeta" className="h-11 flex-1 rounded-2xl bg-muted px-3.5 text-[15px] outline-none" />
+          <span className="grid h-11 w-11 place-items-center rounded-2xl bg-muted text-2xl">
+            {icon}
+          </span>
+          <input
+            autoFocus
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            placeholder="Nombre de la carpeta"
+            className="h-11 flex-1 rounded-2xl bg-muted px-3.5 text-[15px] outline-none"
+          />
         </div>
         <IconPicker value={icon} onPick={setIcon} />
-        <button type="submit" disabled={!name.trim()} className="h-12 rounded-2xl bg-primary text-[15px] font-semibold text-primary-foreground disabled:opacity-40">
+        <button
+          type="submit"
+          disabled={!name.trim()}
+          className="h-12 rounded-2xl bg-primary text-[15px] font-semibold text-primary-foreground disabled:opacity-40"
+        >
           Crear
         </button>
       </form>
@@ -330,12 +475,25 @@ function FolderSheet({ open, onClose, parentId }: { open: boolean; onClose: () =
   );
 }
 
-function FolderOptions({ folder, open, onClose, onMove, onDeleted }: { folder: Folder; open: boolean; onClose: () => void; onMove: () => void; onDeleted: () => void }) {
+function FolderOptions({
+  folder,
+  open,
+  onClose,
+  onMove,
+  onDeleted,
+}: {
+  folder: Folder;
+  open: boolean;
+  onClose: () => void;
+  onMove: () => void;
+  onDeleted: () => void;
+}) {
   const [name, setName] = useState(folder.name);
   const [confirm, setConfirm] = useState(false);
   const rename = async () => {
     const clean = name.trim();
-    if (clean && clean !== folder.name) await db.folders.update(folder.id, { name: clean });
+    if (clean && clean !== folder.name)
+      await db.folders.update(folder.id, { name: clean, updatedAt: Date.now() });
     else setName(folder.name);
   };
   return (
@@ -351,9 +509,18 @@ function FolderOptions({ folder, open, onClose, onMove, onDeleted }: { folder: F
       <div className="flex flex-col gap-3">
         <label className="flex items-center gap-2 rounded-2xl bg-muted px-3.5">
           <Pencil className="h-4 w-4 text-muted-foreground" />
-          <input aria-label="Nombre" value={name} onChange={(e) => setName(e.target.value)} onBlur={() => void rename()} className="h-11 flex-1 bg-transparent text-[15px] outline-none" />
+          <input
+            aria-label="Nombre"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            onBlur={() => void rename()}
+            className="h-11 flex-1 bg-transparent text-[15px] outline-none"
+          />
         </label>
-        <IconPicker value={folder.icon} onPick={(icon) => void db.folders.update(folder.id, { icon })} />
+        <IconPicker
+          value={folder.icon}
+          onPick={(icon) => void db.folders.update(folder.id, { icon, updatedAt: Date.now() })}
+        />
         <button
           type="button"
           onClick={() => {
@@ -366,9 +533,15 @@ function FolderOptions({ folder, open, onClose, onMove, onDeleted }: { folder: F
         </button>
         {confirm ? (
           <div className="flex flex-col gap-2 rounded-2xl bg-destructive/10 p-3">
-            <p className="text-sm">Se eliminará la carpeta. Su contenido pasará a la carpeta superior.</p>
+            <p className="text-sm">
+              Se eliminará la carpeta. Su contenido pasará a la carpeta superior.
+            </p>
             <div className="flex gap-2">
-              <button type="button" onClick={() => setConfirm(false)} className="h-10 flex-1 rounded-xl bg-muted text-sm font-medium">
+              <button
+                type="button"
+                onClick={() => setConfirm(false)}
+                className="h-10 flex-1 rounded-xl bg-muted text-sm font-medium"
+              >
                 Cancelar
               </button>
               <button
@@ -377,7 +550,9 @@ function FolderOptions({ folder, open, onClose, onMove, onDeleted }: { folder: F
                   const undo = await deleteFolder(folder.id);
                   onClose();
                   onDeleted();
-                  toast("Carpeta eliminada", { action: { label: "Deshacer", onClick: () => void undo() } });
+                  toast("Carpeta eliminada", {
+                    action: { label: "Deshacer", onClick: () => void undo() },
+                  });
                 }}
                 className="h-10 flex-1 rounded-xl bg-destructive text-sm font-semibold text-destructive-foreground"
               >
@@ -386,7 +561,11 @@ function FolderOptions({ folder, open, onClose, onMove, onDeleted }: { folder: F
             </div>
           </div>
         ) : (
-          <button type="button" onClick={() => setConfirm(true)} className="flex h-11 items-center gap-2 rounded-2xl px-3.5 text-[15px] text-destructive hover:bg-destructive/10">
+          <button
+            type="button"
+            onClick={() => setConfirm(true)}
+            className="flex h-11 items-center gap-2 rounded-2xl px-3.5 text-[15px] text-destructive hover:bg-destructive/10"
+          >
             <Trash2 className="h-4 w-4" /> Eliminar carpeta
           </button>
         )}

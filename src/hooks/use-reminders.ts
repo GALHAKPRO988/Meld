@@ -22,7 +22,8 @@ export function useReminders() {
     const tick = async () => {
       const now = Date.now();
       const hours = useSettings.getState().taskWarnHours;
-      const [events, tasks] = await Promise.all([db.events.toArray(), db.tasks.toArray()]);
+      const [events, allTasks] = await Promise.all([db.events.toArray(), db.tasks.toArray()]);
+      const tasks = allTasks.filter((task) => !task.deletedAt);
       for (const r of [...taskWarnings(tasks, hours, since, now), ...dueReminders(events, tasks, since, now)]) {
         if (seen.has(r.key)) continue;
         seen.add(r.key);

@@ -4,6 +4,7 @@ import { db, ensureTag, newPage, newTask, uid, type Task } from "@/lib/db";
 import { htmlToMarkdown, markdownToHtml } from "@/lib/markdown";
 import { assertJournalEditable } from "@/lib/journal";
 import type { AccessMap } from "@/lib/settings";
+import { moveToTrash, restoreFromTrash } from "@/lib/trash";
 
 export interface AiAction {
   id: string;
@@ -17,7 +18,10 @@ type Report = (a: Omit<AiAction, "id">) => void;
 const fmt = (ms: number | null, withTime = true) =>
   ms == null
     ? null
-    : new Date(ms).toLocaleString("es-ES", withTime ? { dateStyle: "medium", timeStyle: "short" } : { dateStyle: "medium" });
+    : new Date(ms).toLocaleString(
+        "es-ES",
+        withTime ? { dateStyle: "medium", timeStyle: "short" } : { dateStyle: "medium" },
+      );
 
 function taskView(t: Task) {
   return {
@@ -27,7 +31,9 @@ function taskView(t: Task) {
     vence: t.due ? new Date(t.due).toISOString() : null,
     prioridad: t.priority,
     notas: t.notes || undefined,
-    subtareas: t.subtasks.length ? t.subtasks.map((s) => `${s.done ? "[x]" : "[ ]"} ${s.title}`) : undefined,
+    subtareas: t.subtasks.length
+      ? t.subtasks.map((s) => `${s.done ? "[x]" : "[ ]"} ${s.title}`)
+      : undefined,
   };
 }
 
@@ -46,19 +52,23 @@ export function buildTools(access: AccessMap, report: Report): ToolSet {
   /* ---------- Tareas ---------- */
   if (can("tareas")) {
     tools["listar_tareas"] = tool({
-      description: "Lista las tareas del usuario. Filtros: hoy, proximas, todas, completadas. Opcionalmente busca por texto.",
+      description:
+        "Lista las tareas del usuario. Filtros: hoy, proximas, todas, completadas. Opcionalmente busca por texto.",
       inputSchema: z.object({
         filtro: z.enum(["hoy", "proximas", "todas", "completadas"]).default("todas"),
         busqueda: z.string().optional(),
       }),
       execute: async ({ filtro, busqueda }) => {
-        const all = await db.tasks.toArray();
+        const all = (await db.tasks.toArray()).filter((task) => !task.deletedAt);
         const end = new Date();
         end.setHours(23, 59, 59, 999);
-        let list = all.filter((t) => (filtro === "completadas" ? t.status === "done" : t.status !== "done"));
+        let list = all.filter((t) =>
+          filtro === "completadas" ? t.status === "done" : t.status !== "done",
+        );
         if (filtro === "hoy") list = list.filter((t) => t.due && t.due <= end.getTime());
         if (filtro === "proximas") list = list.filter((t) => t.due && t.due > end.getTime());
-        if (busqueda) list = list.filter((t) => t.title.toLowerCase().includes(busqueda.toLowerCase()));
+        if (busqueda)
+          list = list.filter((t) => t.title.toLowerCase().includes(busqueda.toLowerCase()));
         return list.slice(0, 50).map(taskView);
       },
     });
@@ -94,7 +104,7 @@ export function buildTools(access: AccessMap, report: Report): ToolSet {
         inputSchema: z.object({ id: z.string(), completada: z.boolean().default(true) }),
         execute: async ({ id, completada }) => {
           const before = await db.tasks.get(id);
-          if (!before) return { ok: false, error: "No existe" };
+          if (!before || before.deletedAt) return { ok: false, error: "No existe" };
           await db.tasks.update(id, {
             status: completada ? "done" : "todo",
             completedAt: completada ? Date.now() : null,
@@ -119,7 +129,7 @@ export function buildTools(access: AccessMap, report: Report): ToolSet {
         }),
         execute: async ({ id, titulo, fecha, prioridad, notas }) => {
           const before = await db.tasks.get(id);
-          if (!before) return { ok: false, error: "No existe" };
+          if (!before || before.deletedAt) return { ok: false, error: "No existe" };
           await db.tasks.update(id, {
             ...(titulo !== undefined && { title: titulo }),
             ...(fecha !== undefined && { due: parseDate(fecha) }),
@@ -127,18 +137,26 @@ export function buildTools(access: AccessMap, report: Report): ToolSet {
             ...(notas !== undefined && { notes: notas }),
             updatedAt: Date.now(),
           });
-          report({ title: "Tarea editada", detail: titulo ?? before.title, undo: async () => void (await db.tasks.put(before)) });
+          report({
+            title: "Tarea editada",
+            detail: titulo ?? before.title,
+            undo: async () => void (await db.tasks.put(before)),
+          });
           return { ok: true };
         },
       });
       tools["eliminar_tarea"] = tool({
-        description: "Elimina una tarea.",
+        description: "Mueve una tarea a la papelera.",
         inputSchema: z.object({ id: z.string() }),
         execute: async ({ id }) => {
           const before = await db.tasks.get(id);
-          if (!before) return { ok: false, error: "No existe" };
-          await db.tasks.delete(id);
-          report({ title: "Tarea eliminada", detail: before.title, undo: async () => void (await db.tasks.put(before)) });
+          if (!before || before.deletedAt) return { ok: false, error: "No existe" };
+          await moveToTrash("task", id);
+          report({
+            title: "Tarea movida a la papelera",
+            detail: before.title,
+            undo: async () => void (await restoreFromTrash("task", id)),
+          });
           return { ok: true };
         },
       });
@@ -152,11 +170,19 @@ export function buildTools(access: AccessMap, report: Report): ToolSet {
       inputSchema: z.object({ consulta: z.string().default("") }),
       execute: async ({ consulta }) => {
         const q = consulta.toLowerCase();
-        const pages = await db.pages.orderBy("updatedAt").reverse().toArray();
+        const pages = (await db.pages.orderBy("updatedAt").reverse().toArray()).filter(
+          (page) => !page.deletedAt,
+        );
         return pages
-          .filter((p) => !q || p.title.toLowerCase().includes(q) || p.markdown.toLowerCase().includes(q))
+          .filter(
+            (p) => !q || p.title.toLowerCase().includes(q) || p.markdown.toLowerCase().includes(q),
+          )
           .slice(0, 20)
-          .map((p) => ({ id: p.id, titulo: p.title || "Sin título", fragmento: p.markdown.slice(0, 200) }));
+          .map((p) => ({
+            id: p.id,
+            titulo: p.title || "Sin título",
+            fragmento: p.markdown.slice(0, 200),
+          }));
       },
     });
     tools["leer_pagina"] = tool({
@@ -164,18 +190,34 @@ export function buildTools(access: AccessMap, report: Report): ToolSet {
       inputSchema: z.object({ id: z.string() }),
       execute: async ({ id }) => {
         const p = await db.pages.get(id);
-        return p ? { id: p.id, titulo: p.title, markdown: p.markdown } : { error: "No existe" };
+        return p && !p.deletedAt
+          ? { id: p.id, titulo: p.title, markdown: p.markdown }
+          : { error: "No existe" };
       },
     });
     if (canWrite("paginas")) {
       tools["crear_pagina"] = tool({
-        description: "Crea una página nueva con contenido en Markdown. Elige siempre un emoji representativo del tema como icono.",
-        inputSchema: z.object({ titulo: z.string(), markdown: z.string().default(""), icono: z.string().optional() }),
+        description:
+          "Crea una página nueva con contenido en Markdown. Elige siempre un emoji representativo del tema como icono.",
+        inputSchema: z.object({
+          titulo: z.string(),
+          markdown: z.string().default(""),
+          icono: z.string().optional(),
+        }),
         execute: async ({ titulo, markdown, icono }) => {
           const html = markdownToHtml(markdown);
-          const p = newPage({ title: titulo, html, markdown: htmlToMarkdown(html), icon: icono ?? "📄" });
+          const p = newPage({
+            title: titulo,
+            html,
+            markdown: htmlToMarkdown(html),
+            icon: icono ?? "📄",
+          });
           await db.pages.add(p);
-          report({ title: "Página creada", detail: titulo, undo: async () => void (await db.pages.delete(p.id)) });
+          report({
+            title: "Página creada",
+            detail: titulo,
+            undo: async () => void (await db.pages.delete(p.id)),
+          });
           return { ok: true, id: p.id };
         },
       });
@@ -184,9 +226,13 @@ export function buildTools(access: AccessMap, report: Report): ToolSet {
         inputSchema: z.object({ id: z.string(), icono: z.string().min(1).max(16) }),
         execute: async ({ id, icono }) => {
           const before = await db.pages.get(id);
-          if (!before) return { ok: false, error: "No existe" };
+          if (!before || before.deletedAt) return { ok: false, error: "No existe" };
           await db.pages.update(id, { icon: icono, updatedAt: Date.now() });
-          report({ title: "Icono cambiado", detail: `${icono} ${before.title || "Sin título"}`, undo: async () => void (await db.pages.update(id, { icon: before.icon })) });
+          report({
+            title: "Icono cambiado",
+            detail: `${icono} ${before.title || "Sin título"}`,
+            undo: async () => void (await db.pages.update(id, { icon: before.icon })),
+          });
           return { ok: true };
         },
       });
@@ -195,10 +241,18 @@ export function buildTools(access: AccessMap, report: Report): ToolSet {
         inputSchema: z.object({ id: z.string(), markdown: z.string() }),
         execute: async ({ id, markdown }) => {
           const before = await db.pages.get(id);
-          if (!before) return { ok: false, error: "No existe" };
+          if (!before || before.deletedAt) return { ok: false, error: "No existe" };
           const html = before.html + markdownToHtml(markdown);
-          await db.pages.update(id, { html, markdown: htmlToMarkdown(html), updatedAt: Date.now() });
-          report({ title: "Página actualizada", detail: before.title || "Sin título", undo: async () => void (await db.pages.put(before)) });
+          await db.pages.update(id, {
+            html,
+            markdown: htmlToMarkdown(html),
+            updatedAt: Date.now(),
+          });
+          report({
+            title: "Página actualizada",
+            detail: before.title || "Sin título",
+            undo: async () => void (await db.pages.put(before)),
+          });
           return { ok: true };
         },
       });
@@ -214,7 +268,13 @@ export function buildTools(access: AccessMap, report: Report): ToolSet {
         const a = parseDate(desde) ?? 0;
         const b = parseDate(hasta) ?? Date.now() + 864e5 * 30;
         const evs = await db.events.where("start").between(a, b, true, true).toArray();
-        return evs.map((e) => ({ id: e.id, titulo: e.title, inicio: new Date(e.start).toISOString(), fin: new Date(e.end).toISOString(), todo_el_dia: e.allDay }));
+        return evs.map((e) => ({
+          id: e.id,
+          titulo: e.title,
+          inicio: new Date(e.start).toISOString(),
+          fin: new Date(e.end).toISOString(),
+          todo_el_dia: e.allDay,
+        }));
       },
     });
     if (canWrite("calendario")) {
@@ -245,7 +305,11 @@ export function buildTools(access: AccessMap, report: Report): ToolSet {
             updatedAt: now,
           };
           await db.events.add(ev);
-          report({ title: "Evento creado", detail: `${titulo} · ${fmt(start, !todo_el_dia)}`, undo: async () => void (await db.events.delete(ev.id)) });
+          report({
+            title: "Evento creado",
+            detail: `${titulo} · ${fmt(start, !todo_el_dia)}`,
+            undo: async () => void (await db.events.delete(ev.id)),
+          });
           return { ok: true, id: ev.id };
         },
       });
@@ -257,16 +321,34 @@ export function buildTools(access: AccessMap, report: Report): ToolSet {
     tools["listar_carpetas"] = tool({
       description: "Lista las carpetas del usuario.",
       inputSchema: z.object({}),
-      execute: async () => (await db.folders.toArray()).map((f) => ({ id: f.id, nombre: f.name, padre: f.parentId })),
+      execute: async () =>
+        (await db.folders.toArray()).map((f) => ({ id: f.id, nombre: f.name, padre: f.parentId })),
     });
     if (canWrite("carpetas")) {
       tools["crear_carpeta"] = tool({
         description: "Crea una carpeta.",
-        inputSchema: z.object({ nombre: z.string(), icono: z.string().optional(), padre_id: z.string().nullable().optional() }),
+        inputSchema: z.object({
+          nombre: z.string(),
+          icono: z.string().optional(),
+          padre_id: z.string().nullable().optional(),
+        }),
         execute: async ({ nombre, icono, padre_id }) => {
-          const f = { id: uid(), name: nombre, icon: icono ?? "📁", color: "oklch(0.72 0.15 40)", parentId: padre_id ?? null, createdAt: Date.now() };
+          const now = Date.now();
+          const f = {
+            id: uid(),
+            name: nombre,
+            icon: icono ?? "📁",
+            color: "oklch(0.72 0.15 40)",
+            parentId: padre_id ?? null,
+            createdAt: now,
+            updatedAt: now,
+          };
           await db.folders.add(f);
-          report({ title: "Carpeta creada", detail: nombre, undo: async () => void (await db.folders.delete(f.id)) });
+          report({
+            title: "Carpeta creada",
+            detail: nombre,
+            undo: async () => void (await db.folders.delete(f.id)),
+          });
           return { ok: true, id: f.id };
         },
       });
@@ -287,7 +369,12 @@ export function buildTools(access: AccessMap, report: Report): ToolSet {
         execute: async ({ nombre }) => {
           const existed = await db.tags.where("name").equalsIgnoreCase(nombre).first();
           const t = await ensureTag(nombre);
-          if (!existed) report({ title: "Tag creado", detail: `#${t.name}`, undo: async () => void (await db.tags.delete(t.id)) });
+          if (!existed)
+            report({
+              title: "Tag creado",
+              detail: `#${t.name}`,
+              undo: async () => void (await db.tags.delete(t.id)),
+            });
           return { ok: true, id: t.id };
         },
       });
@@ -313,7 +400,13 @@ export function buildTools(access: AccessMap, report: Report): ToolSet {
           const before = await db.journal.get(fecha);
           const html = (before?.html ?? "") + markdownToHtml(markdown);
           assertJournalEditable(fecha);
-          await db.journal.put({ id: fecha, html, markdown: htmlToMarkdown(html), mood: before?.mood ?? null, updatedAt: Date.now() });
+          await db.journal.put({
+            id: fecha,
+            html,
+            markdown: htmlToMarkdown(html),
+            mood: before?.mood ?? null,
+            updatedAt: Date.now(),
+          });
           report({
             title: "Diario actualizado",
             detail: fecha,

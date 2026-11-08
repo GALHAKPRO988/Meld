@@ -10,7 +10,19 @@ import { GlassButton, GlassSegmented } from "@/components/glass/Glass";
 import { TaskRow } from "@/components/tasks/TaskRow";
 import { QuickAddSheet, TaskEditSheet } from "@/components/tasks/TaskSheets";
 import { db, type Task } from "@/lib/db";
-import { EMPTY_FILTER, applyTaskFilter, filterTasks, isFilterActive, persistOrder, sortTasks, toggleTask, type TaskFilter, type TaskSort, type TaskView } from "@/lib/tasks";
+import {
+  EMPTY_FILTER,
+  applyTaskFilter,
+  filterTasks,
+  isFilterActive,
+  persistOrder,
+  sortTasks,
+  toggleTask,
+  type TaskFilter,
+  type TaskSort,
+  type TaskView,
+} from "@/lib/tasks";
+import { moveToTrash, restoreFromTrash } from "@/lib/trash";
 
 export const Route = createFileRoute("/tareas")({
   head: () => ({
@@ -34,7 +46,10 @@ const EMPTY: Record<TaskView, string> = {
 };
 
 function TasksScreen() {
-  const tasks = useLiveQuery(() => db.tasks.toArray(), []);
+  const tasks = useLiveQuery(
+    async () => (await db.tasks.toArray()).filter((task) => !task.deletedAt),
+    [],
+  );
   const [view, setView] = useState<TaskView>("hoy");
   const [adding, setAdding] = useState(false);
   const [editing, setEditing] = useState<Task | null>(null);
@@ -43,7 +58,10 @@ function TasksScreen() {
   const [showFilters, setShowFilters] = useState(false);
   const tags = useLiveQuery(() => db.tags.toArray(), []) ?? [];
   const folders = useLiveQuery(() => db.folders.toArray(), []) ?? [];
-  const list = useMemo(() => (tasks ? sortTasks(applyTaskFilter(filterTasks(tasks, view), filter), sort) : []), [tasks, view, filter, sort]);
+  const list = useMemo(
+    () => (tasks ? sortTasks(applyTaskFilter(filterTasks(tasks, view), filter), sort) : []),
+    [tasks, view, filter, sort],
+  );
   const todayProgress = useMemo(() => {
     if (!tasks) return { total: 0, done: 0, percent: 0 };
     const startOfDay = new Date();
@@ -54,7 +72,9 @@ function TasksScreen() {
     const e = endOfDay.getTime();
 
     const pendingToday = tasks.filter((t) => t.status !== "done" && t.due !== null && t.due <= e);
-    const doneToday = tasks.filter((t) => t.status === "done" && t.completedAt && t.completedAt >= s && t.completedAt <= e);
+    const doneToday = tasks.filter(
+      (t) => t.status === "done" && t.completedAt && t.completedAt >= s && t.completedAt <= e,
+    );
 
     const total = pendingToday.length + doneToday.length;
     const done = doneToday.length;
@@ -68,16 +88,20 @@ function TasksScreen() {
     [next[i], next[j]] = [next[j]!, next[i]!];
     void persistOrder(next);
   };
-  const toggleIn = <T,>(arr: T[], v: T) => (arr.includes(v) ? arr.filter((x) => x !== v) : [...arr, v]);
+  const toggleIn = <T,>(arr: T[], v: T) =>
+    arr.includes(v) ? arr.filter((x) => x !== v) : [...arr, v];
   const todayCount = useMemo(() => (tasks ? filterTasks(tasks, "hoy").length : 0), [tasks]);
 
   const onToggle = async (t: Task) => {
     const undo = await toggleTask(t);
-    if (t.status !== "done") toast("Tarea completada", { action: { label: "Deshacer", onClick: () => void undo() } });
+    if (t.status !== "done")
+      toast("Tarea completada", { action: { label: "Deshacer", onClick: () => void undo() } });
   };
   const onDelete = async (t: Task) => {
-    await db.tasks.delete(t.id);
-    toast("Tarea eliminada", { action: { label: "Deshacer", onClick: () => void db.tasks.put(t) } });
+    await moveToTrash("task", t.id);
+    toast.success("Tarea movida a la papelera", {
+      action: { label: "Deshacer", onClick: () => void restoreFromTrash("task", t.id) },
+    });
   };
 
   return (
@@ -87,7 +111,12 @@ function TasksScreen() {
         title="Tareas"
         subtitle={`${todayCount} para hoy`}
         actions={
-          <GlassButton size="md" aria-label="Filtros y orden" className={showFilters || isFilterActive(filter) ? "text-coral" : undefined} onClick={() => setShowFilters((v) => !v)}>
+          <GlassButton
+            size="md"
+            aria-label="Filtros y orden"
+            className={showFilters || isFilterActive(filter) ? "text-coral" : undefined}
+            onClick={() => setShowFilters((v) => !v)}
+          >
             <SlidersHorizontal className="h-5 w-5" />
           </GlassButton>
         }
@@ -138,7 +167,11 @@ function TasksScreen() {
           <div className="no-scrollbar flex items-center gap-2 overflow-x-auto">
             <span className="shrink-0 text-muted-foreground">Prioridad</span>
             {([1, 2, 3, 4] as Task["priority"][]).map((p) => (
-              <GlassPill key={p} active={filter.priorities.includes(p)} onClick={() => setFilter({ ...filter, priorities: toggleIn(filter.priorities, p) })}>
+              <GlassPill
+                key={p}
+                active={filter.priorities.includes(p)}
+                onClick={() => setFilter({ ...filter, priorities: toggleIn(filter.priorities, p) })}
+              >
                 P{p}
               </GlassPill>
             ))}
@@ -147,7 +180,11 @@ function TasksScreen() {
             <div className="no-scrollbar flex items-center gap-2 overflow-x-auto">
               <span className="shrink-0 text-muted-foreground">Tags</span>
               {tags.map((t) => (
-                <GlassPill key={t.id} active={filter.tagIds.includes(t.id)} onClick={() => setFilter({ ...filter, tagIds: toggleIn(filter.tagIds, t.id) })}>
+                <GlassPill
+                  key={t.id}
+                  active={filter.tagIds.includes(t.id)}
+                  onClick={() => setFilter({ ...filter, tagIds: toggleIn(filter.tagIds, t.id) })}
+                >
                   <span className="h-2 w-2 rounded-full" style={{ background: t.color }} /> {t.name}
                 </GlassPill>
               ))}
@@ -155,14 +192,32 @@ function TasksScreen() {
           )}
           <div className="no-scrollbar flex items-center gap-2 overflow-x-auto">
             <span className="shrink-0 text-muted-foreground">Carpeta</span>
-            <GlassPill active={filter.folderId === null} onClick={() => setFilter({ ...filter, folderId: null })}>Todas</GlassPill>
-            <GlassPill active={filter.folderId === "none"} onClick={() => setFilter({ ...filter, folderId: "none" })}>Sin carpeta</GlassPill>
+            <GlassPill
+              active={filter.folderId === null}
+              onClick={() => setFilter({ ...filter, folderId: null })}
+            >
+              Todas
+            </GlassPill>
+            <GlassPill
+              active={filter.folderId === "none"}
+              onClick={() => setFilter({ ...filter, folderId: "none" })}
+            >
+              Sin carpeta
+            </GlassPill>
             {folders.map((f) => (
-              <GlassPill key={f.id} active={filter.folderId === f.id} onClick={() => setFilter({ ...filter, folderId: f.id })}>{f.name}</GlassPill>
+              <GlassPill
+                key={f.id}
+                active={filter.folderId === f.id}
+                onClick={() => setFilter({ ...filter, folderId: f.id })}
+              >
+                {f.name}
+              </GlassPill>
             ))}
           </div>
           {isFilterActive(filter) && (
-            <button className="self-start text-coral" onClick={() => setFilter(EMPTY_FILTER)}>Quitar filtros</button>
+            <button className="self-start text-coral" onClick={() => setFilter(EMPTY_FILTER)}>
+              Quitar filtros
+            </button>
           )}
         </div>
       )}
@@ -177,23 +232,55 @@ function TasksScreen() {
         ) : (
           <AnimatePresence mode="popLayout" initial={false}>
             {list.length === 0 ? (
-              <motion.p key={`empty-${view}`} initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="py-16 text-center text-muted-foreground">
+              <motion.p
+                key={`empty-${view}`}
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                className="py-16 text-center text-muted-foreground"
+              >
                 {EMPTY[view]}
               </motion.p>
             ) : (
-              <motion.div key={view} initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="flex flex-col gap-2">
+              <motion.div
+                key={view}
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                className="flex flex-col gap-2"
+              >
                 <AnimatePresence>
                   {list.map((t, i) => (
                     <div key={t.id} className="flex items-center gap-1">
                       <div className="min-w-0 flex-1">
                         <ul>
-                          <TaskRow task={t} index={i} onToggle={() => void onToggle(t)} onDelete={() => void onDelete(t)} onOpen={() => setEditing(t)} />
+                          <TaskRow
+                            task={t}
+                            index={i}
+                            onToggle={() => void onToggle(t)}
+                            onDelete={() => void onDelete(t)}
+                            onOpen={() => setEditing(t)}
+                          />
                         </ul>
                       </div>
                       {sort === "manual" && showFilters && (
                         <div className="flex shrink-0 flex-col">
-                          <button aria-label="Subir" disabled={i === 0} onClick={() => move(i, -1)} className="p-1 text-muted-foreground disabled:opacity-30"><ArrowUp className="h-4 w-4" /></button>
-                          <button aria-label="Bajar" disabled={i === list.length - 1} onClick={() => move(i, 1)} className="p-1 text-muted-foreground disabled:opacity-30"><ArrowDown className="h-4 w-4" /></button>
+                          <button
+                            aria-label="Subir"
+                            disabled={i === 0}
+                            onClick={() => move(i, -1)}
+                            className="p-1 text-muted-foreground disabled:opacity-30"
+                          >
+                            <ArrowUp className="h-4 w-4" />
+                          </button>
+                          <button
+                            aria-label="Bajar"
+                            disabled={i === list.length - 1}
+                            onClick={() => move(i, 1)}
+                            className="p-1 text-muted-foreground disabled:opacity-30"
+                          >
+                            <ArrowDown className="h-4 w-4" />
+                          </button>
                         </div>
                       )}
                     </div>
@@ -203,11 +290,19 @@ function TasksScreen() {
             )}
           </AnimatePresence>
         )}
-        {list.length > 0 && <p className="mt-4 text-center text-xs text-muted-foreground">Desliza → para completar, ← para eliminar</p>}
+        {list.length > 0 && (
+          <p className="mt-4 text-center text-xs text-muted-foreground">
+            Desliza → para completar, ← para eliminar
+          </p>
+        )}
       </div>
 
       <div className="pb-safe app-col fixed inset-x-0 bottom-0 z-30 flex lg:hidden justify-end px-5 pb-5">
-        <GlassButton aria-label="Nueva tarea" onClick={() => setAdding(true)} className="glass-strong">
+        <GlassButton
+          aria-label="Nueva tarea"
+          onClick={() => setAdding(true)}
+          className="glass-strong"
+        >
           <Plus className="h-7 w-7" />
         </GlassButton>
       </div>

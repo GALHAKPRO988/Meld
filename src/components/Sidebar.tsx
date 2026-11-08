@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link, useNavigate } from "@tanstack/react-router";
-import { ChevronDown, ChevronRight, History, MessageCircle, PanelLeftClose, PanelLeftOpen, Search, Settings } from "lucide-react";
+import { ChevronDown, ChevronRight, History, MessageCircle, PanelLeftClose, PanelLeftOpen, Search, Settings, Trash2 } from "lucide-react";
 import { useLiveQuery } from "dexie-react-hooks";
 import { SECTION_ICONS } from "@/components/AccessList";
 import { SECTION_ROUTES } from "@/components/MainMenu";
@@ -128,6 +128,9 @@ export function Sidebar() {
         <div className="flex-1" />
         <Link to="/ajustes" className={item} activeProps={active} title="Ajustes">
           <Settings className="h-5 w-5 shrink-0" strokeWidth={1.7} /> {label("Ajustes")}
+        </Link>
+        <Link to="/papelera" className={item} activeProps={active} title="Papelera">
+          <Trash2 className="h-5 w-5 shrink-0" strokeWidth={1.7} /> {label("Papelera")}
         </Link>
       </div>
     </aside>

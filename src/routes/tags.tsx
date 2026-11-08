@@ -99,7 +99,7 @@ function TagRow({ tag, uses, onMerge }: { tag: Tag; uses: number; onMerge: () =>
 function TagsScreen() {
   const data = useLiveQuery(async () => {
     const [tags, pages, tasks, events] = await Promise.all([db.tags.toArray(), db.pages.toArray(), db.tasks.toArray(), db.events.toArray()]);
-    const all = [...pages, ...tasks, ...events];
+    const all = [...pages.filter((page) => !page.deletedAt), ...tasks.filter((task) => !task.deletedAt), ...events];
     return tags.sort((a, b) => a.name.localeCompare(b.name, "es")).map((t) => ({ tag: t, uses: all.filter((x) => x.tagIds.includes(t.id)).length }));
   }, []);
   const [name, setName] = useState("");
@@ -173,8 +173,8 @@ function TagDetail({ tagId }: { tagId: string }) {
     ]);
     return {
       tag,
-      pages: pages.sort((a, b) => b.updatedAt - a.updatedAt),
-      tasks: tasks.sort((a, b) => Number(a.status === "done") - Number(b.status === "done") || a.order - b.order),
+      pages: pages.filter((page) => !page.deletedAt).sort((a, b) => b.updatedAt - a.updatedAt),
+      tasks: tasks.filter((task) => !task.deletedAt).sort((a, b) => Number(a.status === "done") - Number(b.status === "done") || a.order - b.order),
       events: events.sort((a, b) => b.start - a.start),
     };
   }, [tagId]);

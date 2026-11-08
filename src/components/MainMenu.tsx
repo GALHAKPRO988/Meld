@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { Link, useNavigate } from "@tanstack/react-router";
-import { MessageCircle, Search } from "lucide-react";
+import { MessageCircle, Search, Trash2 } from "lucide-react";
 import { SECTION_ICONS } from "@/components/AccessList";
 import { SECTION_LABELS, SECTION_ORDER, type SectionId } from "@/lib/settings";
 
@@ -86,6 +86,13 @@ export function MainMenu({ open, onClose }: { open: boolean; onClose: () => void
                   );
                 })}
               </div>
+              <Link
+                to="/papelera"
+                onClick={onClose}
+                className="mt-2 flex items-center justify-center gap-2 rounded-2xl bg-muted py-2.5 text-sm font-medium"
+              >
+                <Trash2 className="h-4 w-4" strokeWidth={1.7} /> Papelera
+              </Link>
               <Link
                 to="/"
                 onClick={onClose}

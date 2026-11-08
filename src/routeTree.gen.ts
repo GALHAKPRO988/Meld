@@ -15,6 +15,7 @@ import { Route as BuscarRouteImport } from './routes/buscar'
 import { Route as CalendarioRouteImport } from './routes/calendario'
 import { Route as CarpetasRouteImport } from './routes/carpetas'
 import { Route as DiarioRouteImport } from './routes/diario'
+import { Route as PapeleraRouteImport } from './routes/papelera'
 import { Route as TagsRouteImport } from './routes/tags'
 import { Route as TareasRouteImport } from './routes/tareas'
 import { Route as PaginasIndexRouteImport } from './routes/paginas.index'
@@ -50,6 +51,11 @@ const DiarioRoute = DiarioRouteImport.update({
   path: '/diario',
   getParentRoute: () => rootRouteImport,
 } as any)
+const PapeleraRoute = PapeleraRouteImport.update({
+  id: '/papelera',
+  path: '/papelera',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const TagsRoute = TagsRouteImport.update({
   id: '/tags',
   path: '/tags',
@@ -78,6 +84,7 @@ export interface FileRoutesByFullPath {
   '/calendario': typeof CalendarioRoute
   '/carpetas': typeof CarpetasRoute
   '/diario': typeof DiarioRoute
+  '/papelera': typeof PapeleraRoute
   '/tags': typeof TagsRoute
   '/tareas': typeof TareasRoute
   '/paginas/$pageId': typeof PaginasPageIdRoute
@@ -90,6 +97,7 @@ export interface FileRoutesByTo {
   '/calendario': typeof CalendarioRoute
   '/carpetas': typeof CarpetasRoute
   '/diario': typeof DiarioRoute
+  '/papelera': typeof PapeleraRoute
   '/tags': typeof TagsRoute
   '/tareas': typeof TareasRoute
   '/paginas/$pageId': typeof PaginasPageIdRoute
@@ -103,6 +111,7 @@ export interface FileRoutesById {
   '/calendario': typeof CalendarioRoute
   '/carpetas': typeof CarpetasRoute
   '/diario': typeof DiarioRoute
+  '/papelera': typeof PapeleraRoute
   '/tags': typeof TagsRoute
   '/tareas': typeof TareasRoute
   '/paginas/$pageId': typeof PaginasPageIdRoute
@@ -117,6 +126,7 @@ export interface FileRouteTypes {
     | '/calendario'
     | '/carpetas'
     | '/diario'
+    | '/papelera'
     | '/tags'
     | '/tareas'
     | '/paginas/$pageId'
@@ -129,6 +139,7 @@ export interface FileRouteTypes {
     | '/calendario'
     | '/carpetas'
     | '/diario'
+    | '/papelera'
     | '/tags'
     | '/tareas'
     | '/paginas/$pageId'
@@ -141,6 +152,7 @@ export interface FileRouteTypes {
     | '/calendario'
     | '/carpetas'
     | '/diario'
+    | '/papelera'
     | '/tags'
     | '/tareas'
     | '/paginas/$pageId'
@@ -154,6 +166,7 @@ export interface RootRouteChildren {
   CalendarioRoute: typeof CalendarioRoute
   CarpetasRoute: typeof CarpetasRoute
   DiarioRoute: typeof DiarioRoute
+  PapeleraRoute: typeof PapeleraRoute
   TagsRoute: typeof TagsRoute
   TareasRoute: typeof TareasRoute
   PaginasPageIdRoute: typeof PaginasPageIdRoute
@@ -204,6 +217,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DiarioRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/papelera': {
+      id: '/papelera'
+      path: '/papelera'
+      fullPath: '/papelera'
+      preLoaderRoute: typeof PapeleraRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/tags': {
       id: '/tags'
       path: '/tags'
@@ -242,6 +262,7 @@ const rootRouteChildren: RootRouteChildren = {
   CalendarioRoute: CalendarioRoute,
   CarpetasRoute: CarpetasRoute,
   DiarioRoute: DiarioRoute,
+  PapeleraRoute: PapeleraRoute,
   TagsRoute: TagsRoute,
   TareasRoute: TareasRoute,
   PaginasPageIdRoute: PaginasPageIdRoute,

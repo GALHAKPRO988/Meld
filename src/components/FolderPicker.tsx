@@ -31,7 +31,15 @@ export function FolderTreeSheet({
   return (
     <GlassSheet open={open} onClose={onClose} title={title}>
       <div className="flex max-h-[50vh] flex-col overflow-y-auto">
-        {[{ id: null as Id | null, name: rootLabel, icon: "🗂️", depth: 0 }, ...rows.map((r) => ({ id: r.folder.id as Id | null, name: r.folder.name, icon: r.folder.icon, depth: r.depth }))].map((f) => {
+        {[
+          { id: null as Id | null, name: rootLabel, icon: "🗂️", depth: 0 },
+          ...rows.map((r) => ({
+            id: r.folder.id as Id | null,
+            name: r.folder.name,
+            icon: r.folder.icon,
+            depth: r.depth,
+          })),
+        ].map((f) => {
           const off = f.id !== null && disabled?.has(f.id);
           return (
             <button
@@ -43,7 +51,11 @@ export function FolderTreeSheet({
                 onClose();
               }}
               style={{ paddingLeft: 12 + f.depth * 18 }}
-              className={cn("flex items-center gap-3 rounded-2xl py-2.5 pr-3 text-left", value === f.id ? "bg-accent" : "hover:bg-muted", off && "opacity-35")}
+              className={cn(
+                "flex items-center gap-3 rounded-2xl py-2.5 pr-3 text-left",
+                value === f.id ? "bg-accent" : "hover:bg-muted",
+                off && "opacity-35",
+              )}
             >
               <span className="text-lg">{f.icon}</span>
               <span className="flex-1 truncate text-[15px]">{f.name}</span>
@@ -58,14 +70,32 @@ export function FolderTreeSheet({
           e.preventDefault();
           if (!name.trim()) return;
           const id = uid();
-          await db.folders.add({ id, name: name.trim(), icon: "📁", color: "oklch(0.72 0.15 40)", parentId: null, createdAt: Date.now() });
+          const now = Date.now();
+          await db.folders.add({
+            id,
+            name: name.trim(),
+            icon: "📁",
+            color: "oklch(0.72 0.15 40)",
+            parentId: null,
+            createdAt: now,
+            updatedAt: now,
+          });
           onPick(id);
           setName("");
           onClose();
         }}
       >
-        <input value={name} onChange={(e) => setName(e.target.value)} placeholder="Nueva carpeta…" className="h-11 flex-1 rounded-2xl bg-muted px-3 text-sm outline-none" />
-        <button type="submit" className="grid h-11 w-11 place-items-center rounded-2xl bg-primary text-primary-foreground" aria-label="Crear carpeta">
+        <input
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+          placeholder="Nueva carpeta…"
+          className="h-11 flex-1 rounded-2xl bg-muted px-3 text-sm outline-none"
+        />
+        <button
+          type="submit"
+          className="grid h-11 w-11 place-items-center rounded-2xl bg-primary text-primary-foreground"
+          aria-label="Crear carpeta"
+        >
           <Plus className="h-4 w-4" />
         </button>
       </form>
@@ -73,15 +103,29 @@ export function FolderTreeSheet({
   );
 }
 
-export function FolderPicker({ value, onChange }: { value: Id | null; onChange: (id: Id | null) => void }) {
+export function FolderPicker({
+  value,
+  onChange,
+}: {
+  value: Id | null;
+  onChange: (id: Id | null) => void;
+}) {
   const folders = useLiveQuery(() => db.folders.toArray(), []) ?? [];
   const [open, setOpen] = useState(false);
   const current = folders.find((f) => f.id === value);
 
   return (
     <>
-      <button type="button" onClick={() => setOpen(true)} className="inline-flex h-7 items-center gap-1.5 rounded-full bg-muted px-2.5 text-xs font-medium">
-        {current ? <span>{current.icon}</span> : <FolderOpen className="h-3.5 w-3.5 text-muted-foreground" />}
+      <button
+        type="button"
+        onClick={() => setOpen(true)}
+        className="inline-flex h-7 items-center gap-1.5 rounded-full bg-muted px-2.5 text-xs font-medium"
+      >
+        {current ? (
+          <span>{current.icon}</span>
+        ) : (
+          <FolderOpen className="h-3.5 w-3.5 text-muted-foreground" />
+        )}
         {current?.name ?? "Sin carpeta"}
       </button>
       <FolderTreeSheet open={open} onClose={() => setOpen(false)} value={value} onPick={onChange} />

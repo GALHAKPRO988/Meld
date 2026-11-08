@@ -24,6 +24,7 @@ export function filterTasks(tasks: Task[], view: TaskView, now = new Date()): Ta
   end.setHours(23, 59, 59, 999);
   const e = end.getTime();
   const list = tasks.filter((t) => {
+    if (t.deletedAt) return false;
     if (view === "completadas") return t.status === "done";
     if (t.status === "done") return false;
     if (view === "hoy") return t.due !== null && t.due <= e;
@@ -63,7 +64,8 @@ export async function toggleTask(task: Task): Promise<() => Promise<void>> {
     endOfDay.setHours(23, 59, 59, 999);
     if (task.due >= startOfDay.getTime() && task.due <= endOfDay.getTime()) {
       const todayTasks = await db.tasks.where("due").between(startOfDay.getTime(), endOfDay.getTime(), true, true).toArray();
-      if (todayTasks.length > 0 && todayTasks.every((todayTask) => todayTask.status === "done")) {
+      const activeTodayTasks = todayTasks.filter((todayTask) => !todayTask.deletedAt);
+      if (activeTodayTasks.length > 0 && activeTodayTasks.every((todayTask) => todayTask.status === "done")) {
         fireConfetti();
         toast("¡Todas las tareas de hoy completadas! 🎉", { duration: 3500 });
       }

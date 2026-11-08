@@ -56,8 +56,8 @@ function SearchScreen() {
       journalEnabled ? db.journal.toArray() : Promise.resolve([]),
     ]);
     return {
-      pages: pages.filter((p) => has(p.title) || has(p.markdown)).slice(0, 10),
-      tasks: tasks.filter((t) => has(t.title) || has(t.notes)).slice(0, 10),
+      pages: pages.filter((p) => !p.deletedAt && (has(p.title) || has(p.markdown))).slice(0, 10),
+      tasks: tasks.filter((t) => !t.deletedAt && (has(t.title) || has(t.notes))).slice(0, 10),
       events: events.filter((e) => has(e.title) || has(e.description)).slice(0, 10),
       tags: tags.filter((t) => has(t.name)).slice(0, 10),
       journal: journal.filter((j) => has(j.markdown)).slice(0, 10),

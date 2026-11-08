@@ -90,15 +90,14 @@ async function createWindow() {
   await waitForServer(url);
 
   const { width: screenWidth, height: screenHeight } = screen.getPrimaryDisplay().workAreaSize;
-  const width = Math.min(1200, Math.round(screenWidth * 0.9));
-  const height = Math.min(800, Math.round(screenHeight * 0.9));
 
   mainWindow = new BrowserWindow({
-    width,
-    height,
-    minWidth: Math.min(360, width),
-    minHeight: Math.min(480, height),
+    width: screenWidth,
+    height: screenHeight,
+    minWidth: 800,
+    minHeight: 600,
     center: true,
+    show: false,
     icon: path.join(runtimeRoot, "build/icon.ico"),
     backgroundColor: "#171717",
     autoHideMenuBar: true,
@@ -108,6 +107,9 @@ async function createWindow() {
       preload: path.join(__dirname, "preload.cjs"),
     },
   });
+
+  mainWindow.maximize();
+  mainWindow.show();
 
   await mainWindow.loadURL(url);
 }

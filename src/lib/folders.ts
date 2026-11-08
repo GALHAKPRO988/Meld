@@ -2,7 +2,8 @@ import { db, type Folder, type Id } from "./db";
 
 const byName = (a: Folder, b: Folder) => a.name.localeCompare(b.name, "es");
 
-export const childrenOf = (folders: Folder[], parentId: Id | null) => folders.filter((f) => (f.parentId ?? null) === parentId).sort(byName);
+export const childrenOf = (folders: Folder[], parentId: Id | null) =>
+  folders.filter((f) => (f.parentId ?? null) === parentId).sort(byName);
 
 /** Every folder nested (at any depth) under `id`, not including `id`. */
 export function descendantIds(folders: Folder[], id: Id): Set<Id> {
@@ -41,7 +42,10 @@ export function canMoveFolder(folders: Folder[], id: Id, newParent: Id | null): 
 }
 
 /** Depth-first, alphabetical flattening for tree views. `collapsed` hides a folder's children. */
-export function flattenTree(folders: Folder[], collapsed: Set<Id> = new Set()): { folder: Folder; depth: number; hasChildren: boolean }[] {
+export function flattenTree(
+  folders: Folder[],
+  collapsed: Set<Id> = new Set(),
+): { folder: Folder; depth: number; hasChildren: boolean }[] {
   const out: { folder: Folder; depth: number; hasChildren: boolean }[] = [];
   const walk = (parent: Id | null, depth: number) => {
     for (const f of childrenOf(folders, parent)) {
@@ -56,8 +60,9 @@ export function flattenTree(folders: Folder[], collapsed: Set<Id> = new Set()): 
 
 export async function moveFolder(id: Id, parentId: Id | null) {
   const folders = await db.folders.toArray();
-  if (!canMoveFolder(folders, id, parentId)) throw new Error("No puedes mover una carpeta dentro de sí misma");
-  await db.folders.update(id, { parentId });
+  if (!canMoveFolder(folders, id, parentId))
+    throw new Error("No puedes mover una carpeta dentro de sí misma");
+  await db.folders.update(id, { parentId, updatedAt: Date.now() });
 }
 
 /** Deletes a folder; its subfolders, pages and tasks move up to its parent. Returns an undo. */
@@ -71,7 +76,10 @@ export async function deleteFolder(id: Id): Promise<() => Promise<void>> {
     db.tasks.where("folderId").equals(id).primaryKeys(),
   ]);
   await db.transaction("rw", [db.folders, db.pages, db.tasks], async () => {
-    await db.folders.where("parentId").equals(id).modify({ parentId: parent });
+    await db.folders
+      .where("parentId")
+      .equals(id)
+      .modify({ parentId: parent, updatedAt: Date.now() });
     await db.pages.where("folderId").equals(id).modify({ folderId: parent });
     await db.tasks.where("folderId").equals(id).modify({ folderId: parent });
     await db.folders.delete(id);
