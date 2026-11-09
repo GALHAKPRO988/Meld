@@ -1,25 +1,14 @@
 # Meld — roadmap
 
-## Fase 1 (base)
-- [x] Sistema de diseño liquid glass (GlassButton, GlassPill, GlassSheet, GlassInput, GlassDropdown)
-- [x] Pantalla inicial idéntica a la captura + chat IA (streaming, markdown, tools, deshacer)
-- [x] Selector de IA (proveedor/modelo) y selector de acceso por secciones
-- [x] Navegación (menú principal), Ajustes, almacenamiento local (Dexie) y export/import/borrado
-- [x] Manifest + icono instalable
-
-## Secciones
-- [x] Páginas: lista + editor Tiptap (barra sobre teclado, formato, tablas, imágenes locales, modo fuente Markdown)
-- [x] Editor: menú slash, bubble menu, callouts, toggles, KaTeX, enlaces [[ ]], buscar/reemplazar, resaltado de código, celdas combinadas
-- [x] Tareas: vistas, creación rápida en lenguaje natural, prioridad, subtareas, repetición, deslizar
-- [x] Tareas: reordenar arrastrando, filtros por tag/carpeta/prioridad
-- [x] Tags: gestión básica (crear, renombrar, color, eliminar)
-- [x] Tags: fusionar, filtrado global
-- [x] Carpetas: árbol/cuadrícula, anidadas, mover
-- [x] Calendario: mes/semana/día, eventos, recordatorios
-- [x] Diario: bienvenida + activación
-- [x] Diario: entradas diarias, ánimo, racha, calendario
-- [x] Búsqueda global básica
-- [ ] Offline con service worker (pendiente)
-- [x] Auto-actualizaciones GitHub + barra lateral plegable
-- [x] Interfaz de escritorio con barra lateral
-- [x] Avisos de calendario/tareas con la app abierta
+## Roadmap v1.2.0
+[ ] Añadir una nueva sección para guardar enlaces, tiene previews de los enlaces, puedes ponerles tags y puedes guardarlos en carpetas.
+  [ ] Permitir que en lo de los enlaces haya cosas por defecto tipo, para hacer: tal día, o esta semana o a lo largo de... O también que haya para tipo: comprar, hacer, revisar, comparar o algo así, para que los usuarios se acuerden. Ejemplo, un link de un producto de amazon y le pongo que quiero comprarlo y que antes de esta semana o esta semana.
+[ ] Añadir una homepage en vez de que el chat sea la página principal. La homepage tiene que contener lo siguiente
+  [ ] Mini resumen de tareas que hacer hoy
+  [ ] Una página al azar tuya con su miniatura y todo y que te diga que a ver si has pensado nuevas cosas o algo así
+  [ ] Un como botón para ir al diario
+  [ ] Frase motivacional
+  [ ] Los botones, no son botones, son como tarjetas liquid glass con el icono por ejemplo la del diario el icono del diario en la tarjeta con un texto que diga diario y otro texto más pequeño que diga algo más.
+  [ ] También en la homepage, una tarjeta con un link y su preview y te diga a ver si te acuerdas o tal o si quieres pasar a revisarlo...
+[ ] Hacer que las ias no sean con api key si no que por sign in de cada proveedor. Excepto local que ese hay que configurarlo con los datos de tu ia local.
+[ ] Que cuando creas una tarea te de para configurarla del todo, no para solo poner el nombre y que la descripción se muestre siempre debajo del título de la tarea.
