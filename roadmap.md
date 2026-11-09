@@ -1,14 +1,44 @@
-# Meld — roadmap
+# Meld — Roadmap
 
 ## Roadmap v1.2.0
-[] Añadir una nueva sección para guardar enlaces, tiene previews de los enlaces, puedes ponerles tags y puedes guardarlos en carpetas.
-  [] Permitir que en lo de los enlaces haya cosas por defecto tipo, para hacer: tal día, o esta semana o a lo largo de... O también que haya para tipo: comprar, hacer, revisar, comparar o algo así, para que los usuarios se acuerden. Ejemplo, un link de un producto de amazon y le pongo que quiero comprarlo y que antes de esta semana o esta semana.
-[] Añadir una homepage en vez de que el chat sea la página principal. La homepage tiene que contener lo siguiente
-  [] Mini resumen de tareas que hacer hoy
-  [] Una página al azar tuya con su miniatura y todo y que te diga que a ver si has pensado nuevas cosas o algo así
-  [] Un como botón para ir al diario
-  [] Frase motivacional
-  [] Los botones, no son botones, son como tarjetas liquid glass con el icono por ejemplo la del diario el icono del diario en la tarjeta con un texto que diga diario y otro texto más pequeño que diga algo más.
-  [] También en la homepage, una tarjeta con un link y su preview y te diga a ver si te acuerdas o tal o si quieres pasar a revisarlo...
-[] Hacer que las ias no sean con api key si no que por sign in de cada proveedor. Excepto local que ese hay que configurarlo con los datos de tu ia local.
-[] Que cuando creas una tarea te de para configurarla del todo, no para solo poner el nombre y que la descripción se muestre siempre debajo del título de la tarea.
+
+### 1. Sistema de enlaces guardados
+- [ ] Añadir una nueva sección para guardar enlaces.
+  - [ ] Mostrar una vista previa (*preview*) de cada enlace.
+  - [ ] Permitir añadir etiquetas (*tags*) a los enlaces.
+  - [ ] Permitir organizar los enlaces en carpetas.
+  - [ ] Añadir opciones predefinidas para indicar cuándo queremos realizar una acción con un enlace:
+    - Para un día concreto.
+    - Esta semana.
+    - A lo largo de un periodo de tiempo.
+  - [ ] Añadir categorías o tipos de acción para los enlaces:
+    - Comprar.
+    - Hacer.
+    - Revisar.
+    - Comparar.
+    - Otras categorías que puedan resultar útiles.
+  - [ ] Permitir combinar una acción con un plazo de tiempo.
+    - Ejemplo: guardar un enlace de un producto de Amazon, marcarlo como «Comprar» y establecer como plazo «Esta semana».
+
+### 2. Nueva homepage
+- [ ] Crear una nueva página de inicio (*homepage*) en lugar de utilizar el chat como página principal.
+  - [ ] Mostrar un pequeño resumen de las tareas pendientes para hoy.
+  - [ ] Mostrar una página aleatoria del usuario, incluyendo su miniatura, e invitarle a revisarla o añadir nuevas ideas.
+  - [ ] Añadir una tarjeta para acceder al diario.
+  - [ ] Mostrar una frase motivacional.
+  - [ ] Utilizar tarjetas con estética *Liquid Glass* en lugar de botones tradicionales.
+    - Cada tarjeta debe incluir un icono representativo.
+    - Incluir un título y un texto descriptivo más pequeño.
+    - Ejemplo: una tarjeta con el icono del diario, el título «Diario» y una pequeña descripción.
+  - [ ] Añadir una tarjeta con un enlace guardado y su vista previa.
+    - Invitar al usuario a recordar ese enlace, revisarlo o retomarlo.
+
+### 3. Sistema de autenticación de proveedores de IA
+- [ ] Eliminar la necesidad de introducir API keys para conectar proveedores de IA.
+  - [ ] Permitir iniciar sesión directamente con la cuenta de cada proveedor.
+  - [ ] Mantener una configuración independiente para los modelos de IA locales.
+    - Estos deberán configurarse manualmente con los datos de conexión de la IA local.
+
+### 4. Mejoras en la creación de tareas
+- [ ] Ampliar el formulario de creación de tareas para permitir configurar todos sus detalles desde el principio, en lugar de limitarse únicamente al nombre.
+- [ ] Mostrar siempre la descripción de la tarea debajo de su título.
